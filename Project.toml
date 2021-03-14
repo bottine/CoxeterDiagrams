@@ -1,0 +1,9 @@
+name = "CoxeterDiagrams"
+uuid = "031067e9-6044-4365-9518-ddaf8d94f8f1"
+authors = ["<remi.bottinelli@unine.ch>"]
+version = "0.1.0"
+
+[deps]
+Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
+Memoize = "c03570c3-d221-55d1-a50c-7939bbd78826"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

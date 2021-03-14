@@ -1,0 +1,11 @@
+9 6
+vertices labels: t0 s1 s2 s3 s4 s5 s6 s7 s8
+s1 s3 3
+s1 s7 5
+s3 s5 3
+s5 s6 3
+s6 s4 3
+s4 s8 5
+s4 s2 4
+s1 t0 4
+t0 s2 1

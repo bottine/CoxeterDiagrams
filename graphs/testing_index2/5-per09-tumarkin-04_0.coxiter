@@ -1,0 +1,10 @@
+8 5
+vertices labels: s1 s2 s3 s4 s5 s6 s7 t
+s1 s7 5
+s2 s3 1
+s3 s4 5
+s4 s5 3
+s5 s6 3
+s6 s7 3
+t s2 1
+t s1 1
