@@ -17,7 +17,7 @@ module CoxeterDiagrams
     using Memoize
     using StaticArrays
     using Debugger
-
+    import Base.show 
 
 
     include("sbitset.jl")
@@ -26,7 +26,7 @@ module CoxeterDiagrams
     include("coxiter_io.jl")
 
 
-    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol, plot
+    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol
 
 
     # A connected induced subdiagram.
