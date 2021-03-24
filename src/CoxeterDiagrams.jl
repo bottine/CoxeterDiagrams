@@ -727,6 +727,57 @@ module CoxeterDiagrams
 
     end
 
+
+
+    function matrix_to_dot(Mat)
+        
+        (m,n) = size(Mat)
+        
+        @assert m == n
+
+        dot_string = """
+    strict graph {
+        layout=neato
+        node [shape=point];
+        """
+
+        function label_to_edge_type(k)
+            if k == 1
+                return "[style=dotted,label=$k,weight=0]"
+            elseif k == 0
+                return "[penwidth=3,label=$k,weight=2]"
+            elseif k == 3
+                return "[label=$k]"
+            elseif k > 3
+                return "[color = \"" * "black:invis:"^(k-3) * ":black\",label=$k]"
+            end
+        end
+
+        for i in 1:m
+            for j in i+1:n
+                if Mat[i,j] ≠ 2
+                    dot_string = dot_string * "\t$i -- $j" * label_to_edge_type(Mat[i,j]) * ";\n"
+                end
+            end
+        end
+
+        dot_string = dot_string * "}"
+
+
+        return dot_string
+
+    end
+
+    function plot(das::DiagramAndSubs, cmdline_opts::String="") # stolen from here https://stackoverflow.com/questions/27771824/julia-tool-for-graph-visualization
+       if isempty(cmdline_opts) 
+           stdin, proc = open(`neato -Tx11`, "w")
+       else 
+           stdin, proc = open(`neato -Tx11 $cmdline_opts`, "w")
+       end
+       matrix_to_dot(das.D, stdin)
+       close(stdin)
+    end
+
 end # end of module
 
 
