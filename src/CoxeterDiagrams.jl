@@ -26,7 +26,7 @@ module CoxeterDiagrams
     include("coxiter_io.jl")
 
 
-    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol
+    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol, plot
 
 
     # A connected induced subdiagram.
@@ -768,16 +768,13 @@ module CoxeterDiagrams
 
     end
 
-    function plot(das::DiagramAndSubs, cmdline_opts::String="") # stolen from here https://stackoverflow.com/questions/27771824/julia-tool-for-graph-visualization
-       if isempty(cmdline_opts) 
-           stdin, proc = open(`neato -Tx11`, "w")
-       else 
-           stdin, proc = open(`neato -Tx11 $cmdline_opts`, "w")
-       end
-       matrix_to_dot(das.D, stdin)
-       close(stdin)
-    end
+    
 
+    function Base.show(io, ::MIME"image/png", das::DiagramAndSubs)
+        to_neato_io = open(`neato -Tpng`, io, write=true)
+        write(to_neato_io,matrix_to_dot(das.D))
+        close(to_neato_io)
+    end
 end # end of module
 
 
