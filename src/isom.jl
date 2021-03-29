@@ -1,5 +1,5 @@
 import LinearAlgebra
-using LightGraphs
+import LightGraphs
 
 function to_SimpleGraph_plus_colors(mat::Matrix{Int})
     
@@ -8,30 +8,20 @@ function to_SimpleGraph_plus_colors(mat::Matrix{Int})
     @assert LinearAlgebra.issymmetric(mat)
     (m,n) = size(mat)
 
-    vertices = Any[i for i in 1:n]
-    vertices_c = Int[-1 for i in 1:n]
-    adj = Any[]
+    g = LightGraphs.SimpleGraph(m)
+    e = LightGraphs.edgetype(g)
+    edges_color = Dict()
     for i in 1:m
         for j in i+1:n
             if mat[i,j]≠2
-                edge = (i,j)
-                push!(vertices,edge)
-                push!(vertices_c,mat[i,j])
-                push!(adj,(i,edge))
-                push!(adj,(j,edge))
+                LightGraphs.add_edge!(g,i,j)
+                # it seems LightGraphs's algorithm wants both direction for each edge…
+                push!(edges_color,e(i,j)=>mat[i,j])
+                push!(edges_color,e(j,i)=>mat[i,j])
             end 
         end
     end
-    
-    g = SimpleGraph(length(vertices))
-
-    for (u,v) in adj
-        idx_u = indexin(u,vertices)[1]
-        idx_v = indexin(v,vertices)[1]
-        add_edge!(g,idx_u,idx_v)
-    end
-
-    return g, vertices_c 
+    return g, edges_color 
 
 end
 
@@ -40,9 +30,9 @@ function is_isom(mat1,mat2)
     
     g1,c1 = to_SimpleGraph_plus_colors(mat1)
     g2,c2 = to_SimpleGraph_plus_colors(mat2)
-    color_rel(v1,v2) = c1[v1] == c2[v2]
+    color_rel(e1,e2) = c1[e1] == c2[e2]
 
-    return LightGraphs.Experimental.has_isomorph(g1,g2, LightGraphs.Experimental.VF2(),vertex_relation=color_rel)
+    return LightGraphs.Experimental.has_isomorph(g1,g2, LightGraphs.Experimental.VF2(),edge_relation=color_rel)
 
 end
 

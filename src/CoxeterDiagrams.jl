@@ -23,10 +23,11 @@ module CoxeterDiagrams
     include("sbitset.jl")
     include("diagram_type.jl")
     include("degree_sequence.jl")
+    include("isom.jl")
     include("coxiter_io.jl")
 
 
-    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol
+    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol, is_isom
 
 
     # A connected induced subdiagram.
@@ -116,8 +117,9 @@ module CoxeterDiagrams
         affine_subs_rank_d_minus_1::Vector{Tuple{SBitSet{4},InducedSubDiagram}}
     end
 
-
-
+    function is_isom(das1::DiagramAndSubs,das2::DiagramAndSubs)
+        return is_isom(das1.D,das2.D) 
+    end
 
     function dump_das(das::DiagramAndSubs;range=nothing)
        
