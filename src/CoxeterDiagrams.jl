@@ -27,7 +27,7 @@ module CoxeterDiagrams
     include("coxiter_io.jl")
 
 
-    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol, is_isom
+    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol, is_isom, save_png
 
 
     # A connected induced subdiagram.
@@ -115,6 +115,9 @@ module CoxeterDiagrams
         spherical_subs_rank_d_minus_1::Vector{Tuple{SBitSet{4},InducedSubDiagram}}
         spherical_subs_rank_d::Vector{Tuple{SBitSet{4},InducedSubDiagram}}
         affine_subs_rank_d_minus_1::Vector{Tuple{SBitSet{4},InducedSubDiagram}}
+
+        connected_diagram_type_cache::Dict{SBitSet{4},Union{Nothing,ConnectedInducedSubDiagram}}
+
     end
 
     function is_isom(das1::DiagramAndSubs,das2::DiagramAndSubs)
@@ -274,13 +277,7 @@ module CoxeterDiagrams
 
 
 
-    # dirty hack to memoize `connected_diagram_type` only on its first argument
-    Arg = Tuple{SBitSet{4},Array{Int,2},Bool}
-    Base.hash(a::Arg, h::UInt) = hash(a[1], hash(:Arg, h))
-    Base.isequal(a::Arg, b::Arg) = Base.isequal(hash(a), hash(b))
-
-
-    @memoize Dict function connected_diagram_type(VS::SBitSet{4},D::Array{Int,2}; only_sporadic::Bool=false)
+    function connected_diagram_type(VS::SBitSet{4},D::Array{Int,2}; only_sporadic::Bool=false)
         
         @assert true "The diagram here is assumed connected. maybe this deserves a check"
 
@@ -470,7 +467,7 @@ module CoxeterDiagrams
 
     end
 
-    function try_extend(VS::SBitSet{4},S::InducedSubDiagram,D::Array{Int,2},v::Int)::Union{Nothing,InducedSubDiagram}
+    function try_extend(das::DiagramAndSubs,VS::SBitSet{4},S::InducedSubDiagram,D::Array{Int,2},v::Int)::Union{Nothing,InducedSubDiagram}
        
        
 
@@ -535,9 +532,12 @@ module CoxeterDiagrams
 
         end
         
-
         
-        joined = connected_diagram_type(joined_vertices,D;only_sporadic=only_sporadic)
+        
+         
+        joined = get!(das.connected_diagram_type_cache,joined_vertices) do
+            connected_diagram_type(joined_vertices,D;only_sporadic=only_sporadic)
+        end
         
         if joined === nothing
             return nothing
@@ -594,7 +594,7 @@ module CoxeterDiagrams
         resize!(das.subs,2*len)
         for j in 1:len
             (sup,sub) = das.subs[j]
-            res = try_extend(sup,sub,das.D,new_vertex)
+            res = try_extend(das,sup,sub,das.D,new_vertex)
             if res ≠ nothing
                 sup_v = sup|singleton_v
                 sub_v = res
@@ -619,8 +619,6 @@ module CoxeterDiagrams
 
     function build_diagram_and_subs(M::Array{Int,2},dimension::Int)
        
-        empty!(memoize_cache(connected_diagram_type))
-
         n = size(M,1)
         @assert size(M) == (n,n) "M must be square"
         @assert M == M' "M must be symmetric"
@@ -629,7 +627,7 @@ module CoxeterDiagrams
         subs = Vector{Tuple{SBitSet{4},InducedSubDiagram}}([])
         push!(subs,(SBitSet{4}(), the_empty_isd()))
 
-        das = DiagramAndSubs(reshape([],0,0),dimension,subs,[],[],[])
+        das = DiagramAndSubs(reshape([],0,0),dimension,subs,[],[],[],Dict{SBitSet{4},Union{Nothing,ConnectedInducedSubDiagram}}())
         for i in 1:n
             #println(i)
             extend!(das,M[i,1:i-1])
@@ -777,6 +775,13 @@ module CoxeterDiagrams
         write(to_neato_io,matrix_to_dot(das.D))
         close(to_neato_io)
     end
+
+    function save_png(path, das::DiagramAndSubs)
+        open(path,"w") do io
+            show(io,MIME"image/png"(),das)
+        end
+    end
+
 end # end of module
 
 

@@ -4,7 +4,7 @@ using CoxeterDiagrams
 using Random
 using LinearAlgebra
 
-@testset "Coxeter Matrix Isomorphism Check" begin
+@testset "Some randomized Coxeter matrix isomorphism checks" begin
    
     max_card = 20
     max_coeff = 5
@@ -48,9 +48,13 @@ using LinearAlgebra
 end
 
 @testset "Compactness/finite volume" begin
-
+    @time begin
     @testset "Known compactness/finite volume values" for row in CSV.Rows("../graphs/known_values.csv";comment="#",delim=";",types=[String,Bool,Bool,Float64,String],ignoreemptylines=true)
-        @test is_compact_respectively_finvol("../graphs/"*row.graph_path) == (row.compact,row.finvol)
+        @testset "$(row.graph_path)" begin
+            println(row.graph_path)
+            @test is_compact_respectively_finvol("../graphs/"*row.graph_path) == (row.compact,row.finvol)
+        end
+    end
     end
 
 end
