@@ -302,7 +302,7 @@ module CoxeterDiagrams
         return joined
     end
 
-    @inline function build_deg_seq_and_associated_data(VS::SBitSet{4},D::Array{Int,2})
+    function build_deg_seq_and_associated_data(VS::SBitSet{4},D::Array{Int,2})
 
         
         @assert true "The diagram here is assumed connected. maybe this deserves a check"
@@ -364,7 +364,7 @@ module CoxeterDiagrams
 
     end
 
-    @inline function connected_non_sporadic_diagram_type(VS::SBitSet{4},D::Array{Int,2},deg_seq_and_assoc)
+    function connected_non_sporadic_diagram_type(VS::SBitSet{4},D::Array{Int,2},deg_seq_and_assoc)
         
         @assert true "The diagram here is assumed connected. maybe this deserves a check"
         
@@ -413,7 +413,7 @@ module CoxeterDiagrams
         end    
     end
 
-    @inline function connected_sporadic_diagram_type(VS::SBitSet{4},D::Array{Int,2},deg_seq_and_assoc)
+    function connected_sporadic_diagram_type(VS::SBitSet{4},D::Array{Int,2},deg_seq_and_assoc)
 
         @assert true "The diagram here is assumed connected. maybe this deserves a check"
 
@@ -479,7 +479,7 @@ module CoxeterDiagrams
         end
         
         # joined should/will be of type ConnectedInducedSubDiagram
-        joined = nothing # Here is the result
+        joined = nothing::Union{Nothing,ConnectedInducedSubDiagram} # Here is the result
         joined_vertices::SBitSet{4} = SBitSet{4}(v)
 
         components = copy(S.connected_components)
@@ -534,9 +534,14 @@ module CoxeterDiagrams
         
         
         
-         
-        joined = get!(das.connected_diagram_type_cache,joined_vertices) do
-            connected_diagram_type(joined_vertices,D;only_sporadic=only_sporadic)
+        joined = begin
+            if haskey(das.connected_diagram_type_cache,joined_vertices) 
+                return das.connected_diagram_type_cache[joined_vertices]
+            else
+                res = connected_diagram_type(joined_vertices,D;only_sporadic=only_sporadic)
+                push!(das.connected_diagram_type_cache,joined_vertices => res)
+                return res
+            end
         end
         
         if joined === nothing
