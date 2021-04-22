@@ -536,11 +536,11 @@ module CoxeterDiagrams
         
         joined = begin
             if haskey(das.connected_diagram_type_cache,joined_vertices) 
-                return das.connected_diagram_type_cache[joined_vertices]
+                das.connected_diagram_type_cache[joined_vertices]
             else
                 res = connected_diagram_type(joined_vertices,D;only_sporadic=only_sporadic)
                 push!(das.connected_diagram_type_cache,joined_vertices => res)
-                return res
+                res
             end
         end
         
