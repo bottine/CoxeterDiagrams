@@ -8,7 +8,7 @@ using LinearAlgebra
    
     max_card = 20
     max_coeff = 5
-    @testset "Cardinality $card" for card in 2:max_card
+    @testset "Cardinality $card" for card in 3:max_card
         
         for run in 10*(max_card-card)
            
@@ -49,10 +49,11 @@ end
 
 @testset "Compactness/finite volume" begin
     @time begin
-    @testset "Known compactness/finite volume values" for row in CSV.Rows("../graphs/known_values.csv";comment="#",delim=";",types=[String,Bool,Bool,Float64,String],ignoreemptylines=true)
+    @testset "Known compactness/finite volume values" for row in CSV.Rows("graphs/known_values.csv";comment="#",delim=";",types=[String,Bool,Bool,Float64,String],ignoreemptylines=true)
         @testset "$(row.graph_path)" begin
             println(row.graph_path)
-            @test is_compact_respectively_finvol("../graphs/"*row.graph_path) == (row.compact,row.finvol)
+            #@test is_compact_respectively_finvol("../graphs/"*row.graph_path) == (row.compact,row.finvol)
+            @test is_compact("graphs/"*row.graph_path) == row.compact
         end
     end
     end
