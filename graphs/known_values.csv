@@ -3,9 +3,9 @@ graph_path;compact;finvol;time;comment
 14-vinb85.coxiter;false;true;;
 16-vinb85.coxiter;false;true;;
 17-vinb85.coxiter;false;true;;
-18-vinb14_gamma2.coxiter;false;true;;
-18-vinb77_Gamma1.coxiter;false;true;;
-18-vinb77_Gamma.coxiter;false;true;;
+#18-vinb14_gamma2.coxiter;false;true;;
+#18-vinb77_Gamma1.coxiter;false;true;;
+#18-vinb77_Gamma.coxiter;false;true;;
 
 d13_10.coxiter;false;true;;
 p6.coxiter;false;true;;

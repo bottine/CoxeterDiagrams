@@ -52,7 +52,7 @@ end
     @testset "Known compactness/finite volume values" for row in CSV.Rows("../graphs/known_values.csv";comment="#",delim=";",types=[String,Bool,Bool,Float64,String],ignoreemptylines=true)
         @testset "$(row.graph_path)" begin
             println(row.graph_path)
-            @test is_compact_respectively_finvol("../graphs/"*row.graph_path) == (row.compact,row.finvol)
+            @test is_compact_respectively_finite_volume("../graphs/"*row.graph_path) == (row.compact,row.finvol)
             #@test is_compact("graphs/"*row.graph_path) == row.compact
         end
     end
@@ -89,7 +89,8 @@ end
     for (rank,mat,compact,fin_vol) in list
         das = CoxeterDiagrams.DiagramAndSubs(mat,rank)
         @test compact == CoxeterDiagrams.is_compact(das)
-        @test fin_vol == CoxeterDiagrams.is_finvol(das)
+        @test fin_vol == CoxeterDiagrams.is_finite_volume(das)
+        @test (compact,fin_vol) == CoxeterDiagrams.is_compact_respectively_finite_volume(das)
     end
 
 end

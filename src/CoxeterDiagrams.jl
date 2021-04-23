@@ -15,7 +15,9 @@ module CoxeterDiagrams
     #import Base.push!, Base.length, Base.copy
 
     using StaticArrays
+    using Memoize
     using Debugger
+    using ResumableFunctions
     import Base.show 
 
 
@@ -26,7 +28,13 @@ module CoxeterDiagrams
     include("coxiter_io.jl")
 
 
-    export build_diagram_and_subs, extend!, is_compact, is_finite_volume, is_compact_finite_volume, is_fin_vol, is_compact_respectively_finvol, is_isom, save_png
+    export  DiagramAndSubs, 
+            extend!, 
+            is_compact, 
+            is_finite_volume, 
+            is_compact_respectively_finite_volume,  
+            is_isom, 
+            save_png
 
 
     mutable struct ConnectedInducedSubDiagram
@@ -457,72 +465,86 @@ module CoxeterDiagrams
     
 
     function is_compact(das::DiagramAndSubs)
-        length(all_spherical_of_rank(das,das.d)) > 0 && 
-        all(
-            length(all_spherical_direct_extensions(das,vert)) == 2 for 
-            vert in all_spherical_of_rank(das,das.d-1)
-        )
-    end
-
-    function is_finvol(das::DiagramAndSubs)
-
-        sph_d = all_spherical_of_rank(das,das.d)
+        
         sph_dm = all_spherical_of_rank(das,das.d-1)
-        aff_dm = all_affine_of_rank(das,das.d-1)
-
-        if length(all_spherical_of_rank(das,das.d)) == 0 && length(all_affine_of_rank(das,das.d-1)) == 0
-            return false
+        for vert in sph_dm
+            if length(all_spherical_direct_extensions(das,vert)) ≠ 2
+                return false
+            end
+        end
+        
+        # need to check that there exists a spherical diagram of rank == d.
+        # If we are here and there is one of rank d-1, since it has an extension we're good
+        # Only remains the case where there is actually no diag of rank d-1
+        if isempty(sph_dm)
+            sph_d = all_spherical_of_rank(das,das.d)
+            if isempty(sph_d)
+                return false
+            end           
         end
 
-        for vert in all_spherical_of_rank(das,das.d-1)
+        
+        return true
+    
+    end
+
+    function is_finite_volume(das::DiagramAndSubs)
+
+        sph_dm = all_spherical_of_rank(das,das.d-1)
+        for vert in sph_dm 
             sph_exts = length(all_spherical_direct_extensions(das,vert))
             aff_exts = length(all_affine_direct_extensions(das,vert))
-            #aff_exts = length(filter(aff -> vert ⊆ aff, aff_dm))
             if !(sph_exts + aff_exts == 2)
                 return false
             end
         end
-        return true
-    end
-
-    # ##########################
-    #
-    # Misc user-facing functions
-    #
-    # ##########################
-    #
-
-    function is_fin_vol(D::Array{Int,2},dimension::Int)
-        
-        das = build_diagram_and_subs(D,dimension)
-        return is_finite_volume(das)
-
-    end
-
-    function is_compact(path::String)
-        
-        # Get file content in s as in https://en.wikibooks.org/wiki/Introducing_Julia/Working_with_text_files
-        s = open(path) do file
-            read(file, String)
-        end
-
-        ret = gug_coxiter_to_matrix(s)
-        if ret === nothing
-            println("Failed reading $path")
-        else
-            (D, rank) = ret
-            if D === nothing || rank === nothing
-                println("Error reading file probably")
-            else
-                das = DiagramAndSubs(D,rank)
-                return is_compact(das) 
+       
+        if isempty(sph_dm)
+            sph_d = all_spherical_of_rank(das,das.d)
+            if isempty(sph_d)
+                aff_dm = all_affine_of_rank(das,das.d-1)
+                isempty(aff_dm) &&return false
             end
         end
-    end
-     
-    function is_compact_respectively_finvol(path::String)
         
-        # Get file content in s as in https://en.wikibooks.org/wiki/Introducing_Julia/Working_with_text_files
+        return true
+    end
+    
+    function is_compact_respectively_finite_volume(das::DiagramAndSubs)
+        
+        compact = true
+        fin_vol = true
+
+        sph_dm = all_spherical_of_rank(das,das.d-1)
+        for vert in sph_dm
+            sph_exts = length(all_spherical_direct_extensions(das,vert))
+            compact && (compact = (sph_exts == 2))
+            if fin_vol 
+                aff_exts = length(all_affine_direct_extensions(das,vert))
+                fin_vol = (sph_exts + aff_exts == 2)
+            end
+            !compact && !fin_vol && return (compact,fin_vol)
+        end
+       
+        empty_sph_d = false
+        if isempty(sph_dm)
+            sph_d = all_spherical_of_rank(das,das.d)
+            if isempty(sph_d)
+                empty_sph_d = true
+                compact = false
+            end
+        end
+        if isempty(sph_dm) && empty_sph_d
+            aff_dm = all_affine_of_rank(das,das.d-1)
+            if isempty(aff_dm)
+                fin_vol = false
+            end
+        end
+        return (compact,fin_vol)
+    end
+
+    function is_compact_respectively_finite_volume(path::String)
+        
         s = open(path) do file
             read(file, String)
         end
@@ -537,8 +559,10 @@ module CoxeterDiagrams
             else
                 das = DiagramAndSubs(D,rank)
                 #dump_das(das;range=nothing)
-                compact = is_compact(das)
-                fin_vol = is_finvol(das)
+                #compact = is_compact(das)
+                #fin_vol = is_finite_volume(das)
+                (compact,fin_vol) = is_compact_respectively_finite_volume(das)
+                #@assert (compact,fin_vol) == (is_compact(das),is_finite_volume(das))
                 return (compact,fin_vol) 
             end
         end

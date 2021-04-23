@@ -264,7 +264,7 @@ const deg_seq_a1 = deg_seq(Vector{Vector{Int}}([[]]))
 Compute the generalized degree sequence associated to the spherical diagram of type A with ``n`` vertices.
 Beware that for all sporadic diagrams, the specified integer corresponds to the _rank_ of the diagram, while for affine non sporadic, it corresponds to the number of vertices.
 """
-deg_seq_a(n::Int) = begin
+@memoize deg_seq_a(n::Int) = begin
     @assert n≥2
     2*deg_seq([[3]]) + (n-2)*deg_seq([[3,3]])::GenDegSeq
 end
@@ -280,7 +280,7 @@ const deg_seq_b3 = deg_seq([[4],[4,3],[3]])
 """
 Similar as [`deg_seq_a`](@ref)
 """
-deg_seq_b(n)::GenDegSeq = begin
+@memoize deg_seq_b(n)::GenDegSeq = begin
     @assert n≥3
     deg_seq([[4]]) + deg_seq([[4,3]]) + (n-3)*deg_seq([[3,3]]) + deg_seq([[3]])
 end
@@ -288,7 +288,7 @@ end
 """
 Similar as [`deg_seq_a`](@ref)
 """
-deg_seq_d(n::Int)::GenDegSeq = begin
+@memoize deg_seq_d(n::Int)::GenDegSeq = begin
     @assert n≥4
     deg_seq([[3,3,3]]) + (n-4)*deg_seq([[3,3]]) + 3*deg_seq([[3]])
 end
@@ -296,7 +296,7 @@ end
 """
 Similar as [`deg_seq_a`](@ref)
 """
-deg_seq_A(n::Int)::GenDegSeq = begin
+@memoize deg_seq_A(n::Int)::GenDegSeq = begin
     @assert n≥3
     n*deg_seq([[3,3]])
 end
@@ -311,7 +311,7 @@ end
 """
 Similar as [`deg_seq_a`](@ref)
 """
-deg_seq_B(n::Int)::GenDegSeq = begin
+@memoize deg_seq_B(n::Int)::GenDegSeq = begin
     @assert n≥5
     deg_seq([[3,3,3]]) + 2*deg_seq([[3]]) + (n-5)*deg_seq([[3,3]]) + deg_seq([[3,4]])  + deg_seq([[4]])
 end
@@ -324,7 +324,7 @@ end
 """
 Similar as [`deg_seq_a`](@ref)
 """
-deg_seq_C(n::Int)::GenDegSeq = begin
+@memoize deg_seq_C(n::Int)::GenDegSeq = begin
     @assert n≥4
     2*deg_seq([[4,3]]) +  2*deg_seq([[4]])  + (n-4)*deg_seq([[3,3]])
 end
@@ -338,7 +338,7 @@ end
 """
 Similar as [`deg_seq_a`](@ref)
 """
-deg_seq_D(n::Int)::GenDegSeq = begin
+@memoize deg_seq_D(n::Int)::GenDegSeq = begin
     @assert n≥6
     2*deg_seq([[3,3,3]]) + 4*deg_seq([[3]]) + (n-6)*deg_seq([[3,3]])
 end
