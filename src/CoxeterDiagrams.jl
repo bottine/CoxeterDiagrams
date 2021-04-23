@@ -421,13 +421,38 @@ module CoxeterDiagrams
     
     function all_affine_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
         
-        extensions = SBitSet{4}[]
-        for piece in das.connected_affine
-            if length(piece.vertices ∩ ~vertices) == 1 && isempty(piece.boundary ∩ vertices)
-                push!(extensions, piece.vertices ∪ vertices) 
+
+        diagrams_go_here = SBitSet{4}[]#Tuple{SBitSet{4},SBitSet{4}}[]
+        function all_extensions(
+            current_vertices::SBitSet{4},
+            current_boundary::SBitSet{4},
+            remaining_vertices::SBitSet{4};
+            look_after=1
+        )
+            
+            if isempty(remaining_vertices) 
+                push!(diagrams_go_here,current_vertices)
+                return
             end
+
+            for (idx,new_piece) in enumerate(das.connected_affine[look_after:end])
+                if  isempty(new_piece.vertices∩current_vertices) && 
+                    isempty(new_piece.boundary∩current_vertices) &&
+                    length(new_piece.vertices ∩ ~remaining_vertices) == 1 &&
+                    isempty(new_piece.boundary ∩ remaining_vertices)
+                    
+                    new_vertices = new_piece.vertices ∪ current_vertices
+                    new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
+                    new_remaining_vertices = remaining_vertices ∩ ~new_piece.vertices
+                    all_extensions(new_vertices,new_boundary,new_remaining_vertices,look_after=look_after+idx)
+                end
+            end               
         end
-        return extensions
+         
+        all_extensions(SBitSet{4}(),SBitSet{4}(),vertices)
+
+
+        return diagrams_go_here
     end
     
 
@@ -451,7 +476,8 @@ module CoxeterDiagrams
 
         for vert in all_spherical_of_rank(das,das.d-1)
             sph_exts = length(all_spherical_direct_extensions(das,vert))
-            aff_exts = length(filter(aff -> vert ⊆ aff, aff_dm))
+            aff_exts = length(all_affine_direct_extensions(das,vert))
+            #aff_exts = length(filter(aff -> vert ⊆ aff, aff_dm))
             if !(sph_exts + aff_exts == 2)
                 return false
             end
