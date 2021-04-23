@@ -375,6 +375,38 @@ module CoxeterDiagrams
         return diagrams_go_here
     end
 
+    function all_affine_of_rank(das::DiagramAndSubs,n::Int)
+        
+        diagrams_go_here = SBitSet{4}[]#Tuple{SBitSet{4},SBitSet{4}}[]
+        function all_extensions(current_vertices::SBitSet{4},current_boundary::SBitSet{4},current_rank;look_after=1)
+            
+            if current_rank == n
+                push!(diagrams_go_here,current_vertices)
+                #push!(diagrams_go_here,(current_vertices,current_boundary))
+                return
+            end
+
+            for (idx,new_piece) in enumerate(das.connected_affine[look_after:end])
+                if  current_rank + length(new_piece.vertices) - 1 ≤ n &&
+                    isempty(new_piece.vertices∩current_vertices) && 
+                    isempty(new_piece.boundary∩current_vertices) 
+                    
+                    new_vertices = new_piece.vertices ∪ current_vertices
+                    new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
+                    all_extensions(new_vertices,new_boundary,current_rank + length(new_piece.vertices) - 1,look_after=look_after+idx)
+                end
+            end               
+        end
+         
+        all_extensions(SBitSet{4}(),SBitSet{4}(),0)
+
+        return diagrams_go_here
+    end
+
+
+
+
+    
     function all_spherical_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
         
         extensions = SBitSet{4}[]
@@ -386,12 +418,45 @@ module CoxeterDiagrams
         return extensions
     end
 
+    
+    function all_affine_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
+        
+        extensions = SBitSet{4}[]
+        for piece in das.connected_affine
+            if length(piece.vertices ∩ ~vertices) == 1 && isempty(piece.boundary ∩ vertices)
+                push!(extensions, piece.vertices ∪ vertices) 
+            end
+        end
+        return extensions
+    end
+    
+
     function is_compact(das::DiagramAndSubs)
         length(all_spherical_of_rank(das,das.d)) > 0 && 
         all(
             length(all_spherical_direct_extensions(das,vert)) == 2 for 
             vert in all_spherical_of_rank(das,das.d-1)
         )
+    end
+
+    function is_finvol(das::DiagramAndSubs)
+
+        sph_d = all_spherical_of_rank(das,das.d)
+        sph_dm = all_spherical_of_rank(das,das.d-1)
+        aff_dm = all_affine_of_rank(das,das.d-1)
+
+        if length(all_spherical_of_rank(das,das.d)) == 0 && length(all_affine_of_rank(das,das.d-1)) == 0
+            return false
+        end
+
+        for vert in all_spherical_of_rank(das,das.d-1)
+            sph_exts = length(all_spherical_direct_extensions(das,vert))
+            aff_exts = length(filter(aff -> vert ⊆ aff, aff_dm))
+            if !(sph_exts + aff_exts == 2)
+                return false
+            end
+        end
+        return true
     end
 
     # ##########################
@@ -428,7 +493,7 @@ module CoxeterDiagrams
             end
         end
     end
-    #= 
+     
     function is_compact_respectively_finvol(path::String)
         
         # Get file content in s as in https://en.wikibooks.org/wiki/Introducing_Julia/Working_with_text_files
@@ -444,11 +509,11 @@ module CoxeterDiagrams
             if D === nothing || rank === nothing
                 println("Error reading file probably")
             else
-                das = build_diagram_and_subs(D,rank)
+                das = DiagramAndSubs(D,rank)
                 #dump_das(das;range=nothing)
                 compact = is_compact(das)
-                fin_vol = is_finite_volume(das)
-                return is_compact_finite_volume(das) 
+                fin_vol = is_finvol(das)
+                return (compact,fin_vol) 
             end
         end
 
@@ -456,7 +521,7 @@ module CoxeterDiagrams
     end
 
 
-
+   #= 
 
     function check_all_graphs(sub_directory="")
         
@@ -491,8 +556,8 @@ module CoxeterDiagrams
         end
 
     end
-    =#
 
+    =#
 
     function matrix_to_dot(Mat)
         
