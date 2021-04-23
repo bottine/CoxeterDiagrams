@@ -91,7 +91,9 @@ end
 
 ## Bitwise operations
 @inline Base.:&(L::UBitSet{N}, R::UBitSet{N}) where N =  SBitSet(ntuple(i->(L.chunks[i] & R.chunks[i]), Val{N}()))
+@inline Base.:∩(L::UBitSet{N}, R::UBitSet{N}) where N =  SBitSet(ntuple(i->(L.chunks[i] & R.chunks[i]), Val{N}()))
 @inline Base.:|(L::UBitSet{N}, R::UBitSet{N}) where N =  SBitSet(ntuple(i->(L.chunks[i] | R.chunks[i]), Val{N}()))
+@inline Base.:∪(L::UBitSet{N}, R::UBitSet{N}) where N =  SBitSet(ntuple(i->(L.chunks[i] | R.chunks[i]), Val{N}()))
 @inline xor(L::UBitSet{N}, R::UBitSet{N}) where N =  SBitSet(ntuple(i->xor(L.chunks[i], R.chunks[i]), Val{N}()))
 @inline ~(a::UBitSet{N}) where N = SBitSet(ntuple(i->~a.chunks[i], Val{N}()))
 @inline ⊆(L::UBitSet{N}, R::UBitSet{N}) where N = iszero(L&(~R))

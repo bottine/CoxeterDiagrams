@@ -8,7 +8,7 @@ using LinearAlgebra
    
     max_card = 20
     max_coeff = 5
-    @testset "Cardinality $card" for card in 2:max_card
+    @testset "Cardinality $card" for card in 3:max_card
         
         for run in 10*(max_card-card)
            
@@ -53,8 +53,43 @@ end
         @testset "$(row.graph_path)" begin
             println(row.graph_path)
             @test is_compact_respectively_finvol("../graphs/"*row.graph_path) == (row.compact,row.finvol)
+            #@test is_compact("graphs/"*row.graph_path) == row.compact
         end
     end
+    end
+end
+
+
+@testset "Compactness/finite volume for some randomly generated matrices (checks that the code agrees with old versions of itself)" begin
+    
+    list = Tuple{Int64, Matrix{Int64}, Bool, Bool}[
+         (3, [8 1 2 0 2 6; 1 2 0 0 1 0; 2 0 4 2 0 2; 0 0 2 8 2 6; 2 1 0 2 4 2; 6 0 2 6 2 12], 0, 1),
+		 (2, [10 1 0 2 6; 1 0 2 6 1; 0 2 0 0 2; 2 6 0 4 0; 6 1 2 0 0], 1, 0),
+		 (4, [4 1 3 2 2 2; 1 4 1 1 2 1; 3 1 4 3 3 2; 2 1 3 4 2 3; 2 2 3 2 2 2; 2 1 2 3 2 4], 1, 1),
+		 (3, [2 0 0 0 1; 0 4 2 2 2; 0 2 0 2 2; 0 2 2 4 5; 1 2 2 5 4], 1, 1),
+		 (3, [2 2 2 1 2 2; 2 4 1 2 2 2; 2 1 2 3 5 2; 1 2 3 0 2 2; 2 2 5 2 0 1; 2 2 2 2 1 0], 1, 1),
+		 (3, [4 2 0 2 2; 2 0 2 0 2; 0 2 2 2 0; 2 0 2 4 2; 2 2 0 2 10], 0, 1),
+		 (3, [4 0 3 2 2; 0 4 2 2 2; 3 2 8 3 2; 2 2 3 6 0; 2 2 2 0 2], 0, 1),
+		 (3, [2 6 1 0 2 2; 6 4 2 1 2 2; 1 2 4 2 3 6; 0 1 2 2 2 2; 2 2 3 2 4 0; 2 2 6 2 0 6], 0, 1),
+		 (2, [8 0 2 0 2; 0 4 1 2 2; 2 1 4 2 1; 0 2 2 6 1; 2 2 1 1 0], 1, 0),
+		 (3, [0 2 1 2 3; 2 2 1 2 2; 1 1 2 0 1; 2 2 0 0 2; 3 2 1 2 8], 1, 1),
+		 (3, [0 2 3 2 0; 2 6 2 0 2; 3 2 8 3 2; 2 0 3 4 2; 0 2 2 2 0], 0, 1),
+		 (2, [4 1 0 2 2; 1 4 2 0 2; 0 2 6 2 1; 2 0 2 4 1; 2 2 1 1 2], 1, 0),
+		 (3, [4 6 2 2 2; 6 4 2 3 2; 2 2 4 2 0; 2 3 2 4 2; 2 2 0 2 4], 1, 0),
+		 (4, [4 5 1 2 3 2; 5 2 0 2 2 2; 1 0 0 4 1 2; 2 2 4 6 2 4; 3 2 1 2 2 3; 2 2 2 4 3 10], 1, 1),
+		 (2, [4 2 6 1 1; 2 10 1 0 1; 6 1 4 1 4; 1 0 1 4 0; 1 1 4 0 8], 0, 1),
+		 (2, [2 0 2 2 0; 0 4 1 5 2; 2 1 2 1 2; 2 5 1 4 0; 0 2 2 0 10], 1, 0),
+		 (4, [2 2 2 2 2; 2 0 2 2 2; 2 2 0 2 2; 2 2 2 0 2; 2 2 2 2 12], 1, 1),
+         (4, [4 3 2 3 2 1; 3 0 2 2 2 1; 2 2 0 2 2 1; 3 2 2 0 2 1; 2 2 2 2 4 2; 1 1 1 1 2 2], 1, 1), 
+         (4, [2 2 2 2 1 2 2; 2 4 2 2 6 2 0; 2 2 4 2 0 4 0; 2 2 2 10 4 2 0; 1 6 0 4 2 1 6; 2 2 4 2 1 6 1; 2 0 0 0 6 1 0], 1, 1), 
+         (4, [8 2 2 4 2; 2 4 2 2 2; 2 2 2 2 2; 4 2 2 12 2; 2 2 2 2 12], 1, 1), 
+         (5, [2 2 3 2 2 4 3; 2 4 2 2 3 4 2; 3 2 0 2 2 0 2; 2 2 2 2 2 0 3; 2 3 2 2 4 0 2; 4 4 0 0 0 2 2; 3 2 2 3 2 2 4], 1, 1)
+    ]  
+
+    for (rank,mat,compact,fin_vol) in list
+        das = CoxeterDiagrams.DiagramAndSubs(mat,rank)
+        @test compact == CoxeterDiagrams.is_compact(das)
+        @test fin_vol == CoxeterDiagrams.is_finvol(das)
     end
 
 end
