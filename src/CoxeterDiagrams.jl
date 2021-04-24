@@ -354,34 +354,34 @@ module CoxeterDiagrams
     end
 
 
-
     function all_spherical_of_rank(das::DiagramAndSubs,n::Int)
         
         diagrams_go_here = SBitSet{4}[]#Tuple{SBitSet{4},SBitSet{4}}[]
-        function all_extensions(current_vertices::SBitSet{4},current_boundary::SBitSet{4};look_after=1)
-            
-            if length(current_vertices) == n
-                push!(diagrams_go_here,current_vertices)
-                #push!(diagrams_go_here,(current_vertices,current_boundary))
-                return
-            end
-
-            for (idx,new_piece) in enumerate(das.connected_spherical[look_after:end])
-                if  length(new_piece.vertices) + length(current_vertices) ≤ n &&
-                    isempty(new_piece.vertices∩current_vertices) && 
-                    isempty(new_piece.boundary∩current_vertices) 
-                    
-                    new_vertices = new_piece.vertices ∪ current_vertices
-                    new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
-                    all_extensions(new_vertices,new_boundary,look_after=look_after+idx)
-                end
-            end               
-        end
-         
-        all_extensions(SBitSet{4}(),SBitSet{4}())
-
+        _all_spherical_of_rank__all_extensions(das,n,SBitSet{4}(),SBitSet{4}(),diagrams_go_here)
         return diagrams_go_here
+
     end
+    function _all_spherical_of_rank__all_extensions(das::DiagramAndSubs,n::Int,current_vertices::SBitSet{4},current_boundary::SBitSet{4}, diagrams_go_here::Vector{SBitSet{4}};look_after=1)
+        
+        if length(current_vertices) == n
+            push!(diagrams_go_here,current_vertices)
+            #push!(diagrams_go_here,(current_vertices,current_boundary))
+            return
+        end
+
+        for idx in look_after:length(das.connected_spherical)
+            new_piece = das.connected_spherical[idx]
+            if  length(new_piece.vertices) + length(current_vertices) ≤ n &&
+                isempty(new_piece.vertices ∩ current_vertices) && 
+                isempty(new_piece.boundary ∩ current_vertices) 
+                
+                new_vertices = new_piece.vertices ∪ current_vertices
+                new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
+                _all_spherical_of_rank__all_extensions(das,n,new_vertices,new_boundary,diagrams_go_here,look_after=look_after+idx)
+            end
+        end               
+    end
+
 
     function all_affine_of_rank(das::DiagramAndSubs,n::Int)
         
