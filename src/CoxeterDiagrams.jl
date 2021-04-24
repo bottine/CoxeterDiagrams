@@ -47,6 +47,11 @@ module CoxeterDiagrams
     end
     CISD = ConnectedInducedSubDiagram
 
+    function Base.:(==)(a::CISD,b::CISD)
+        # TODO? add the das in CISD so that we can only compare CISDs when they lie in the same DAS?
+        a.vertices == b.vertices && a.boundary == b.boundary && a.type == b.type 
+    end
+
     function rank(cisd::ConnectedInducedSubDiagram)
         if is_affine(cisd.type)
             return length(cisd.vertices) - 1
@@ -364,30 +369,31 @@ module CoxeterDiagrams
         if length(current_vertices) == n
             push!(diagrams_go_here,current_vertices)
             return
-        end
+        else
 
-        @inbounds for idx in start_idx:length(das.connected_spherical)
-            new_piece = das.connected_spherical[idx]
-            if  length(new_piece.vertices) + length(current_vertices) ≤ n &&
-                isempty(new_piece.vertices ∩ current_vertices) && 
-                isempty(new_piece.boundary ∩ current_vertices) 
-                
-                new_vertices = new_piece.vertices ∪ current_vertices
-                new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
-                _all_spherical_of_rank__all_extensions(das,n,new_vertices,new_boundary,diagrams_go_here,start_idx=idx+1)
-            end
-        end               
+            @inbounds for idx in start_idx:length(das.connected_spherical)
+                new_piece = das.connected_spherical[idx]
+                if  length(new_piece.vertices) + length(current_vertices) ≤ n &&
+                    isempty(new_piece.vertices ∩ current_vertices) && 
+                    isempty(new_piece.boundary ∩ current_vertices) 
+                    
+                    new_vertices = new_piece.vertices ∪ current_vertices
+                    new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
+                    _all_spherical_of_rank__all_extensions(das,n,new_vertices,new_boundary,diagrams_go_here,start_idx=idx+1)
+                end
+            end 
+        end
     end
 
 
     function all_affine_of_rank(das::DiagramAndSubs,n::Int)
         
         diagrams_go_here = SBitSet{4}[]#Tuple{SBitSet{4},SBitSet{4}}[]
-        _all_affine_of_rank__all_extensions(das,SBitSet{4}(),SBitSet{4}(),diagrams_go_here,0)
+        _all_affine_of_rank__all_extensions(das,n,SBitSet{4}(),SBitSet{4}(),0,diagrams_go_here)
         return diagrams_go_here
 
     end
-    function _all_affine_of_rank__all_extensions(das::DiagramAndSubs,current_vertices::SBitSet{4},current_boundary::SBitSet{4},current_rank,diagrams_go_here::Vector{SBitSet{4}};start_idx=1)
+    function _all_affine_of_rank__all_extensions(das::DiagramAndSubs,n::Int,current_vertices::SBitSet{4},current_boundary::SBitSet{4},current_rank,diagrams_go_here::Vector{SBitSet{4}};start_idx=1)
         
         if current_rank == n
             push!(diagrams_go_here,current_vertices)
@@ -403,7 +409,7 @@ module CoxeterDiagrams
                 
                 new_vertices = new_piece.vertices ∪ current_vertices
                 new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
-                _all_affine_of_rank__all_extensions(das,new_vertices,new_boundary,current_rank + length(new_piece.vertices) - 1,diagrams_go_here,start_idx=idx+1)
+                _all_affine_of_rank__all_extensions(das,n,new_vertices,new_boundary,current_rank + length(new_piece.vertices) - 1,diagrams_go_here,start_idx=idx+1)
             end
         end               
     end
@@ -486,9 +492,12 @@ module CoxeterDiagrams
     end
 
     function is_finite_volume(das::DiagramAndSubs)
-
-        sph_dm = all_spherical_of_rank(das,das.d-1)
-        for vert in sph_dm 
+        
+        empty_sph_dm = true
+        #sph_dm = all_spherical_of_rank(das,das.d-1)
+        #for vert in sph_dm 
+        for vert in  all_spherical_of_rank(das,das.d-1)
+            empty_sph_dm = false
             sph_exts = length(all_spherical_direct_extensions(das,vert))
             aff_exts = length(all_affine_direct_extensions(das,vert))
             if !(sph_exts + aff_exts == 2)
@@ -496,7 +505,8 @@ module CoxeterDiagrams
             end
         end
        
-        if isempty(sph_dm)
+        #if isempty(sph_dm)
+        if empty_sph_dm
             sph_d = all_spherical_of_rank(das,das.d)
             if isempty(sph_d)
                 aff_dm = all_affine_of_rank(das,das.d-1)
