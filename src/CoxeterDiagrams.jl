@@ -285,52 +285,50 @@ module CoxeterDiagrams
                 cisd.boundary = cisd.boundary ∪ singleton_v
             end
         end
-
-
-        # compute all possible CISD extensions of `current` and put them in `new_spherical`/`new_affine`
-        function all_extensions(current_vertices::SBitSet{4},current_boundary::SBitSet{4};look_after=1)
-            
-            if length(current_vertices) > das.d + 1
-                return
-            end
-
-            # Is `current` a valid connected diagram?
-            current_type = connected_diagram_type(current_vertices,das.D)
-            if !isnothing(current_type)
-
-                # if here, it is a valid connected diagram, which we "wrap" in a nice type
-                current_cisd = CISD(current_vertices,current_boundary,current_type)
-                
-                if is_spherical(current_type)
-                    #spherical, so pushed there
-                    @assert current_cisd ∉ new_spherical; push!(new_spherical,current_cisd)
-                    
-                    #since spherical, can (probably) be extended:
-                    for (idx,new_piece) in enumerate(das.connected_spherical[look_after:end])
-                        if isempty(new_piece.vertices∩current_vertices) &&  new_piece.boundary∩current_vertices == singleton_v
-                            new_vertices = new_piece.vertices ∪ current_vertices
-                            new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
-                            all_extensions(new_vertices,new_boundary,look_after=look_after+idx)
-                        end
-                    end               
-                elseif is_affine(current_type)
-                    #affine, so pushed there
-                    @assert current_cisd ∉ new_affine; push!(new_affine,current_cisd)
-                else
-                    @assert false "Diagram either affine or spherical"
-                end
-            else
-                # `current` is invalid (thus cannot be extended to something valid, bye)
-            end
-        end
         
-        all_extensions(singleton_v,boundary_v)
+        _extend!__all_extensions(das,singleton_v,singleton_v,boundary_v,new_spherical,new_affine)
         
         append!(das.connected_spherical,new_spherical)
         append!(das.connected_affine, new_affine)
        
     end
+    # compute all possible CISD extensions of `current` and put them in `new_spherical`/`new_affine`
+    function _extend!__all_extensions(das::DiagramAndSubs,singleton_v,current_vertices::SBitSet{4},current_boundary::SBitSet{4},new_spherical,new_affine;start_idx=1)
+        
+        if length(current_vertices) > das.d + 1
+            return
+        end
 
+        # Is `current` a valid connected diagram?
+        current_type = connected_diagram_type(current_vertices,das.D)
+        if !isnothing(current_type)
+
+            # if here, it is a valid connected diagram, which we "wrap" in a nice type
+            current_cisd = CISD(current_vertices,current_boundary,current_type)
+            
+            if is_spherical(current_type)
+                #spherical, so pushed there
+                @assert current_cisd ∉ new_spherical; push!(new_spherical,current_cisd)
+                
+                #since spherical, can (probably) be extended:
+                @inbounds for idx in start_idx:length(das.connected_spherical)
+                    new_piece = das.connected_spherical[idx]
+                    if isempty(new_piece.vertices∩current_vertices) &&  new_piece.boundary∩current_vertices == singleton_v
+                        new_vertices = new_piece.vertices ∪ current_vertices
+                        new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
+                        _extend!__all_extensions(das,singleton_v,new_vertices,new_boundary,new_spherical,new_affine,start_idx=idx+1)
+                    end
+                end               
+            elseif is_affine(current_type)
+                #affine, so pushed there
+                @assert current_cisd ∉ new_affine; push!(new_affine,current_cisd)
+            else
+                @assert false "Diagram either affine or spherical"
+            end
+        else
+            # `current` is invalid (thus cannot be extended to something valid, bye)
+        end
+    end
 
     function DiagramAndSubs(dimension::Int)
         D = reshape(UInt16[],(0,0))
@@ -365,11 +363,10 @@ module CoxeterDiagrams
         
         if length(current_vertices) == n
             push!(diagrams_go_here,current_vertices)
-            #push!(diagrams_go_here,(current_vertices,current_boundary))
             return
         end
 
-        for idx in start_idx:length(das.connected_spherical)
+        @inbounds for idx in start_idx:length(das.connected_spherical)
             new_piece = das.connected_spherical[idx]
             if  length(new_piece.vertices) + length(current_vertices) ≤ n &&
                 isempty(new_piece.vertices ∩ current_vertices) && 
@@ -398,7 +395,7 @@ module CoxeterDiagrams
             return
         end
 
-        for idx in start_idx:length(das.connected_affine)
+        @inbounds for idx in start_idx:length(das.connected_affine)
             new_piece = das.connected_affine[idx]
             if  current_rank + length(new_piece.vertices) - 1 ≤ n &&
                 isempty(new_piece.vertices∩current_vertices) && 
@@ -448,7 +445,7 @@ module CoxeterDiagrams
         end
 
 
-        for idx in start_idx:length(das.connected_affine)
+        @inbounds for idx in start_idx:length(das.connected_affine)
             new_piece = das.connected_affine[idx]
             if  isempty(new_piece.vertices∩current_vertices) && 
                 isempty(new_piece.boundary∩current_vertices) &&
