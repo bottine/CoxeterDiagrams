@@ -4,6 +4,10 @@ using CoxeterDiagrams
 using Random
 using LinearAlgebra
 
+CD = CoxeterDiagrams
+CISD = CD.ConnectedInducedSubDiagram
+SBS = CD.SBitSet{4}
+
 @testset "Some randomized Coxeter matrix isomorphism checks" begin
    
     max_card = 20
@@ -57,62 +61,53 @@ end
            2 2 2 2 2 6 2]
     das = DiagramAndSubs(mat,7)
     
-    affine_should_be = CoxeterDiagrams.ConnectedInducedSubDiagram[
-        CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[1, 2, 3]), CoxeterDiagrams.SBitSet{4}(Any[4]), CoxeterDiagrams.DT_A), 
-        CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[4, 5, 6]), CoxeterDiagrams.SBitSet{4}(Any[3, 7]), CoxeterDiagrams.DT_A), 
-        CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[4, 6, 7]), CoxeterDiagrams.SBitSet{4}(Any[3, 5]), CoxeterDiagrams.DT_G2), 
-        CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[5, 6, 7]), CoxeterDiagrams.SBitSet{4}(Any[4]), CoxeterDiagrams.DT_G2)
+    affine_should_be = CISD[
+        CISD(SBS([1, 2, 3]), SBS([4]), CD.DT_A), 
+        CISD(SBS([4, 5, 6]), SBS([3, 7]), CD.DT_A), 
+        CISD(SBS([4, 6, 7]), SBS([3, 5]), CD.DT_G2), 
+        CISD(SBS([5, 6, 7]), SBS([4]), CD.DT_G2)
     ] 
     @test all(x.vertices == y.vertices && x.boundary == y.boundary && x.type == y.type for (x,y) in zip(affine_should_be,das.connected_affine))
 
-    spherical_should_be = CoxeterDiagrams.ConnectedInducedSubDiagram[
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[1]), CoxeterDiagrams.SBitSet{4}(Any[2, 3]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[2]), CoxeterDiagrams.SBitSet{4}(Any[1, 3]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[1, 2]), CoxeterDiagrams.SBitSet{4}(Any[3]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[3]), CoxeterDiagrams.SBitSet{4}(Any[1, 2, 4]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[1, 3]), CoxeterDiagrams.SBitSet{4}(Any[2, 4]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[2, 3]), CoxeterDiagrams.SBitSet{4}(Any[1, 4]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[4]), CoxeterDiagrams.SBitSet{4}(Any[3, 5, 6]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[3, 4]), CoxeterDiagrams.SBitSet{4}(Any[1, 2, 5, 6]), CoxeterDiagrams.DT_b),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[1, 3, 4]), CoxeterDiagrams.SBitSet{4}(Any[2, 5, 6]), CoxeterDiagrams.DT_b),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[2, 3, 4]), CoxeterDiagrams.SBitSet{4}(Any[1, 5, 6]), CoxeterDiagrams.DT_b),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[5]), CoxeterDiagrams.SBitSet{4}(Any[4, 6]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[4, 5]), CoxeterDiagrams.SBitSet{4}(Any[3, 6]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[3, 4, 5]), CoxeterDiagrams.SBitSet{4}(Any[1, 2, 6]), CoxeterDiagrams.DT_b),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[1, 3, 4, 5]), CoxeterDiagrams.SBitSet{4}(Any[2, 6]), CoxeterDiagrams.DT_f4),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[2, 3, 4, 5]), CoxeterDiagrams.SBitSet{4}(Any[1, 6]), CoxeterDiagrams.DT_f4),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[6]), CoxeterDiagrams.SBitSet{4}(Any[4, 5, 7]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[4, 6]), CoxeterDiagrams.SBitSet{4}(Any[3, 5, 7]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[3, 4, 6]), CoxeterDiagrams.SBitSet{4}(Any[1, 2, 5, 7]), CoxeterDiagrams.DT_b),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[1, 3, 4, 6]), CoxeterDiagrams.SBitSet{4}(Any[2, 5, 7]), CoxeterDiagrams.DT_f4),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[2, 3, 4, 6]), CoxeterDiagrams.SBitSet{4}(Any[1, 5, 7]), CoxeterDiagrams.DT_f4),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[5, 6]), CoxeterDiagrams.SBitSet{4}(Any[4, 7]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[7]), CoxeterDiagrams.SBitSet{4}(Any[6]), CoxeterDiagrams.DT_a),
-         CoxeterDiagrams.ConnectedInducedSubDiagram(CoxeterDiagrams.SBitSet{4}(Any[6, 7]), CoxeterDiagrams.SBitSet{4}(Any[4, 5]), CoxeterDiagrams.DT_g2)
+    spherical_should_be = CISD[
+         CISD(SBS([1]), SBS([2, 3]), CD.DT_a),
+         CISD(SBS([2]), SBS([1, 3]), CD.DT_a),
+         CISD(SBS([1, 2]), SBS([3]), CD.DT_a),
+         CISD(SBS([3]), SBS([1, 2, 4]), CD.DT_a),
+         CISD(SBS([1, 3]), SBS([2, 4]), CD.DT_a),
+         CISD(SBS([2, 3]), SBS([1, 4]), CD.DT_a),
+         CISD(SBS([4]), SBS([3, 5, 6]), CD.DT_a),
+         CISD(SBS([3, 4]), SBS([1, 2, 5, 6]), CD.DT_b),
+         CISD(SBS([1, 3, 4]), SBS([2, 5, 6]), CD.DT_b),
+         CISD(SBS([2, 3, 4]), SBS([1, 5, 6]), CD.DT_b),
+         CISD(SBS([5]), SBS([4, 6]), CD.DT_a),
+         CISD(SBS([4, 5]), SBS([3, 6]), CD.DT_a),
+         CISD(SBS([3, 4, 5]), SBS([1, 2, 6]), CD.DT_b),
+         CISD(SBS([1, 3, 4, 5]), SBS([2, 6]), CD.DT_f4),
+         CISD(SBS([2, 3, 4, 5]), SBS([1, 6]), CD.DT_f4),
+         CISD(SBS([6]), SBS([4, 5, 7]), CD.DT_a),
+         CISD(SBS([4, 6]), SBS([3, 5, 7]), CD.DT_a),
+         CISD(SBS([3, 4, 6]), SBS([1, 2, 5, 7]), CD.DT_b),
+         CISD(SBS([1, 3, 4, 6]), SBS([2, 5, 7]), CD.DT_f4),
+         CISD(SBS([2, 3, 4, 6]), SBS([1, 5, 7]), CD.DT_f4),
+         CISD(SBS([5, 6]), SBS([4, 7]), CD.DT_a),
+         CISD(SBS([7]), SBS([6]), CD.DT_a),
+         CISD(SBS([6, 7]), SBS([4, 5]), CD.DT_g2)
     ]
     @test all(x.vertices == y.vertices && x.boundary == y.boundary && x.type == y.type for (x,y) in zip(spherical_should_be,das.connected_spherical))
-    
-    @test length(CoxeterDiagrams.all_affine_of_rank(das,1)) == 0
-    @test length(CoxeterDiagrams.all_affine_of_rank(das,2)) == 4
-    @test length(CoxeterDiagrams.all_affine_of_rank(das,3)) == 0
-    @test length(CoxeterDiagrams.all_affine_of_rank(das,4)) == 1
-    @test length(CoxeterDiagrams.all_affine_of_rank(das,5)) == 0
+   
+    @test [length(CD.all_affine_of_rank(das,i)) for i in 1:5] == [0, 4, 0, 1, 0]
+    #@test length(CoxeterDiagrams.all_affine_of_rank(das,1)) == 0
+    #@test length(CoxeterDiagrams.all_affine_of_rank(das,2)) == 4
+    #@test length(CoxeterDiagrams.all_affine_of_rank(das,3)) == 0
+    #@test length(CoxeterDiagrams.all_affine_of_rank(das,4)) == 1
+    #@test length(CoxeterDiagrams.all_affine_of_rank(das,5)) == 0
    
     @test [length(CoxeterDiagrams.all_spherical_of_rank(das,i)) for i in 1:6] == [7, 21, 31, 21, 3, 0] 
 
 end
 
-@testset "Compactness/finite volume" begin
-    @time begin
-    @testset "Known compactness/finite volume values" for row in CSV.Rows("../graphs/known_values.csv";comment="#",delim=";",types=[String,Bool,Bool,Float64,String],ignoreemptylines=true)
-        @testset "$(row.graph_path)" begin
-            println(row.graph_path)
-            @test is_compact_respectively_finite_volume("../graphs/"*row.graph_path) == (row.compact,row.finvol)
-            #@test is_compact("graphs/"*row.graph_path) == row.compact
-        end
-    end
-    end
-end
+
 
 
 @testset "Compactness/finite volume for some randomly generated matrices (checks that the code agrees with old versions of itself)" begin
@@ -148,4 +143,16 @@ end
         @test (compact,fin_vol) == CoxeterDiagrams.is_compact_respectively_finite_volume(das)
     end
 
+end
+
+@testset "Compactness/finite volume" begin
+    @time begin
+    @testset "Known compactness/finite volume values" for row in CSV.Rows("../graphs/known_values.csv";comment="#",delim=";",types=[String,Bool,Bool,Float64,String],ignoreemptylines=true)
+        @testset "$(row.graph_path)" begin
+            println(row.graph_path)
+            @test is_compact_respectively_finite_volume("../graphs/"*row.graph_path) == (row.compact,row.finvol)
+            #@test is_compact("graphs/"*row.graph_path) == row.compact
+        end
+    end
+    end
 end

@@ -479,11 +479,12 @@ module CoxeterDiagrams
         # need to check that there exists a spherical diagram of rank == d.
         # If we are here and there is one of rank d-1, since it has an extension we're good
         # Only remains the case where there is actually no diag of rank d-1
+        # more or less degenerate in this case I think
         if isempty(sph_dm)
-            sph_d = all_spherical_of_rank(das,das.d)
-            if isempty(sph_d)
+        #    sph_d = all_spherical_of_rank(das,das.d)
+        #    if isempty(sph_d)
                 return false
-            end           
+        #    end           
         end
 
         
@@ -505,13 +506,9 @@ module CoxeterDiagrams
             end
         end
        
-        #if isempty(sph_dm)
-        if empty_sph_dm
-            sph_d = all_spherical_of_rank(das,das.d)
-            if isempty(sph_d)
-                aff_dm = all_affine_of_rank(das,das.d-1)
-                isempty(aff_dm) &&return false
-            end
+        # more or less degenerate in this case I think
+        if empty_sph_dm 
+            return false
         end
         
         return true
@@ -533,19 +530,9 @@ module CoxeterDiagrams
             !compact && !fin_vol && return (compact,fin_vol)
         end
        
-        empty_sph_d = false
+        # more or less degenerate in this case I think
         if isempty(sph_dm)
-            sph_d = all_spherical_of_rank(das,das.d)
-            if isempty(sph_d)
-                empty_sph_d = true
-                compact = false
-            end
-        end
-        if isempty(sph_dm) && empty_sph_d
-            aff_dm = all_affine_of_rank(das,das.d-1)
-            if isempty(aff_dm)
-                fin_vol = false
-            end
+            return (false,false)
         end
         return (compact,fin_vol)
     end

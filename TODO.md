@@ -3,6 +3,7 @@
     * Can short-circuit the iteration as soon as needed
 * More unit testing:
     * Test all functions on the one specific example already present
+* Write `is_degenerate()` to check if the diagram is degenerate in the given rank
 
 # Done
 
