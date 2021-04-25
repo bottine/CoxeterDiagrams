@@ -444,7 +444,7 @@ module CoxeterDiagrams
         end
 
         
-        @inbounds for rank in start_rank:length(das.connected_affine)
+        @inbounds for rank in start_rank:n-current_rank#length(das.connected_affine)
             @inbounds for idx in start_idx:length(das.connected_affine[rank])
                 new_piece = das.connected_affine[rank][idx]
                 if  current_rank + rank ≤ n &&
@@ -604,8 +604,8 @@ module CoxeterDiagrams
                 println("Error reading file probably")
             else
                 das = DiagramAndSubs(D,rank)
-                println(">> ", sum(das.connected_spherical .|> length), ", ", sum(das.connected_affine .|> length))
-                println("> ", length(all_spherical_of_rank(das,das.d-1)), ", ", length(all_spherical_of_rank(das,das.d)), ", ", length(all_affine_of_rank(das,das.d-1)))
+                #println(">> ", sum(das.connected_spherical .|> length), ", ", sum(das.connected_affine .|> length))
+                #println("> ", length(all_spherical_of_rank(das,das.d-1)), ", ", length(all_spherical_of_rank(das,das.d)), ", ", length(all_affine_of_rank(das,das.d-1)))
                 #dump_das(das;range=nothing)
                 #compact = is_compact(das)
                 #fin_vol = is_finite_volume(das)
