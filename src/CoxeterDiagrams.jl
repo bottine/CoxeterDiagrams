@@ -279,8 +279,8 @@ module CoxeterDiagrams
         new_vertex = n+1
         singleton_v = SBitSet{4}(new_vertex)
         boundary_v = SBitSet{4}([i for i in 1:n if das.D[i,new_vertex]≠2])
-        new_spherical = [Vector{CISD}() for i in 1:das.d+1]
-        new_affine    = [Vector{CISD}() for i in 1:das.d+1]
+        new_spherical = [Vector{CISD}() for i in 1:das.d]
+        new_affine    = [Vector{CISD}() for i in 1:das.d]
 
 
         
@@ -293,7 +293,7 @@ module CoxeterDiagrams
         
         _extend!__all_extensions(das,singleton_v,singleton_v,boundary_v,1,new_spherical,new_affine)
        
-        for i in 1:das.d+1
+        for i in 1:das.d
             append!(das.connected_spherical[i],new_spherical[i])
             append!(das.connected_affine[i], new_affine[i])
         end
@@ -308,11 +308,11 @@ module CoxeterDiagrams
         current_card::Int,
         new_spherical,
         new_affine;
-        start_rank=1,
-        start_cisd_idx=1
+        start_card=1,
+        start_piece_idx=1
     )
         
-        if length(current_vertices) > das.d+1
+        if current_card > das.d
             return
         end
 
@@ -324,26 +324,28 @@ module CoxeterDiagrams
             
             if is_spherical(current_type)
                 #spherical, so pushed there
-                @assert current_cisd ∉ new_spherical[current_card]
+                #@assert current_cisd ∉ new_spherical[current_card]
                 push!(new_spherical[current_card],current_cisd)
-                
+
                 #since spherical, can (probably) be extended:
-                @inbounds for rank in start_rank:length(das.connected_spherical)
-                    @inbounds for cisd_idx in start_cisd_idx:length(das.connected_spherical[rank])
-                        new_piece = das.connected_spherical[rank][cisd_idx]
-                        if isempty(new_piece.vertices∩current_vertices) &&  new_piece.boundary∩current_vertices == singleton_v
-                            new_vertices = new_piece.vertices ∪ current_vertices
-                            new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
-                            (new_start_rank,new_start_idx) = cisd_idx == length(das.connected_spherical[rank]) ? (rank+1,1) : (rank,cisd_idx+1)
-                            _extend!__all_extensions(das,singleton_v,new_vertices,new_boundary,current_card+rank,new_spherical,new_affine,start_rank=new_start_rank,start_cisd_idx=new_start_idx)
+                @inbounds for card in start_card:length(das.connected_spherical)
+                    @inbounds for piece_idx in start_piece_idx:length(das.connected_spherical[card])
+                        piece = das.connected_spherical[card][piece_idx]
+                        if isempty(piece.vertices∩current_vertices) &&  piece.boundary∩current_vertices == singleton_v
+                            
+                            new_vertices = piece.vertices ∪ current_vertices
+                            new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+                            
+                            (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
+                            _extend!__all_extensions(das,singleton_v,new_vertices,new_boundary,current_card+card,new_spherical,new_affine,start_card=new_start_card,start_piece_idx=new_start_piece_idx)
                         end
                     end
-                    start_cisd_idx = 1
+                    start_piece_idx = 1
                 end               
             elseif is_affine(current_type)
                 #affine, so pushed there
-                 @assert current_cisd ∉ new_affine[current_card-1]
-                 push!(new_affine[current_card-1],current_cisd)
+                #@assert current_cisd ∉ new_affine[current_card-1]
+                push!(new_affine[current_card-1],current_cisd)
             else
                 @assert false "Diagram either affine or spherical"
             end
@@ -354,8 +356,8 @@ module CoxeterDiagrams
 
     function DiagramAndSubs(dimension::Int)
         D = reshape(UInt16[],(0,0))
-        connected_spherical = [Vector{CISD}() for i in 1:dimension+1]
-        connected_affine    = [Vector{CISD}() for i in 1:dimension+1]
+        connected_spherical = [Vector{CISD}() for i in 1:dimension]
+        connected_affine    = [Vector{CISD}() for i in 1:dimension]
         return DiagramAndSubs(D,dimension,connected_spherical,connected_affine)
     end
 
@@ -377,7 +379,6 @@ module CoxeterDiagrams
     function all_spherical_of_rank(das::DiagramAndSubs,n::Int)
         
         @assert n ≤ das.d
-
         diagrams_go_here = SBitSet{4}[]#Tuple{SBitSet{4},SBitSet{4}}[]
         _all_spherical_of_rank__all_extensions(das,n,SBitSet{4}(),SBitSet{4}(),0,diagrams_go_here)
         return diagrams_go_here
@@ -388,29 +389,32 @@ module CoxeterDiagrams
         n::Int,
         current_vertices::SBitSet{4},
         current_boundary::SBitSet{4},
-        current_card::Int,
+        current_rank::Int,
         diagrams_go_here::Vector{SBitSet{4}};
         start_rank=1,
         start_idx=1
     )
-        @assert current_card == length(current_vertices)
-        if current_card == n
+        #@assert current_rank == length(current_vertices)
+        
+        if current_rank == n
             push!(diagrams_go_here,current_vertices)
             return
         else
 
-            @inbounds for rank in start_rank:n-current_card
-                @inbounds for idx in start_idx:length(das.connected_spherical[rank])
-                    new_piece = das.connected_spherical[rank][idx]
-                    @assert rank == length(new_piece.vertices)
-                    if  current_card + rank ≤ n &&
-                        isempty(new_piece.vertices ∩ current_vertices) && 
-                        isempty(new_piece.boundary ∩ current_vertices) 
+            @inbounds for piece_rank in start_rank:n-current_rank
+                @inbounds for piece_idx in start_idx:length(das.connected_spherical[piece_rank])
+                    piece = das.connected_spherical[piece_rank][piece_idx]
+                    #@assert piece_rank == length(piece.vertices)
+                    if  current_rank + piece_rank ≤ n &&
+                        isempty(piece.vertices ∩ current_vertices) && 
+                        isempty(piece.boundary ∩ current_vertices) 
                         
-                        new_vertices = new_piece.vertices ∪ current_vertices
-                        new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
-                        (new_start_rank,new_start_idx) = idx == length(das.connected_spherical[rank]) ? (rank+1,1) : (rank,idx+1)
-                        _all_spherical_of_rank__all_extensions(das,n,new_vertices,new_boundary,current_card + rank, diagrams_go_here,start_rank=new_start_rank,start_idx=new_start_idx)
+                        new_vertices = piece.vertices ∪ current_vertices
+                        new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+                        new_card = current_rank + piece_rank
+
+                        (new_start_rank,new_start_idx) = piece_idx == length(das.connected_spherical[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
+                        _all_spherical_of_rank__all_extensions(das,n,new_vertices,new_boundary,new_card, diagrams_go_here,start_rank=new_start_rank,start_idx=new_start_idx)
                     end
                 end
                 start_idx=1
@@ -444,17 +448,19 @@ module CoxeterDiagrams
         end
 
         
-        @inbounds for rank in start_rank:n-current_rank#length(das.connected_affine)
-            @inbounds for idx in start_idx:length(das.connected_affine[rank])
-                new_piece = das.connected_affine[rank][idx]
-                if  current_rank + rank ≤ n &&
-                    isempty(new_piece.vertices∩current_vertices) && 
-                    isempty(new_piece.boundary∩current_vertices) 
+        @inbounds for piece_rank in start_rank:n-current_rank
+            @inbounds for piece_idx in start_idx:length(das.connected_affine[piece_rank])
+                piece = das.connected_affine[piece_rank][piece_idx]
+                if  current_rank + piece_rank ≤ n &&
+                    isempty(piece.vertices∩current_vertices) && 
+                    isempty(piece.boundary∩current_vertices) 
                     
-                    new_vertices = new_piece.vertices ∪ current_vertices
-                    new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
-                    (new_start_rank,new_start_idx) = idx == length(das.connected_affine[rank]) ? (rank+1,1) : (rank,idx+1)
-                    _all_affine_of_rank__all_extensions(das,n,new_vertices,new_boundary,current_rank + length(new_piece.vertices) - 1,diagrams_go_here,start_rank=new_start_rank,start_idx=new_start_idx)
+                    new_vertices = piece.vertices ∪ current_vertices
+                    new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+                    new_rank = current_rank + piece_rank 
+
+                    (new_start_rank,new_start_idx) = piece_idx == length(das.connected_affine[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
+                    _all_affine_of_rank__all_extensions(das,n,new_vertices,new_boundary,new_rank ,diagrams_go_here,start_rank=new_start_rank,start_idx=new_start_idx)
                 end
             end  
             start_idx=1
@@ -499,18 +505,19 @@ module CoxeterDiagrams
         end
 
 
-        @inbounds for rank in start_rank:length(das.connected_affine)
-            @inbounds for idx in start_idx:length(das.connected_affine[rank])
-                new_piece = das.connected_affine[rank][idx]
-                if  isempty(new_piece.vertices∩current_vertices) && 
-                    isempty(new_piece.boundary∩current_vertices) &&
-                    length(new_piece.vertices ∩ ~remaining_vertices) == 1 &&
-                    isempty(new_piece.boundary ∩ remaining_vertices)
+        @inbounds for piece_rank in start_rank:length(das.connected_affine)
+            @inbounds for piece_idx in start_idx:length(das.connected_affine[piece_rank])
+                piece = das.connected_affine[piece_rank][piece_idx]
+                if  isempty(piece.vertices∩current_vertices) && 
+                    isempty(piece.boundary∩current_vertices) &&
+                    length(piece.vertices ∩ ~remaining_vertices) == 1 &&
+                    isempty(piece.boundary ∩ remaining_vertices)
                     
-                    new_vertices = new_piece.vertices ∪ current_vertices
-                    new_boundary = ((new_piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~new_piece.vertices))
-                    new_remaining_vertices = remaining_vertices ∩ ~new_piece.vertices
-                    (new_start_rank,new_start_idx) = idx == length(das.connected_affine[rank]) ? (rank+1,1) : (rank,idx+1)
+                    new_vertices = piece.vertices ∪ current_vertices
+                    new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+                    new_remaining_vertices = remaining_vertices ∩ ~piece.vertices
+                    
+                    (new_start_rank,new_start_idx) = piece_idx == length(das.connected_affine[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
                     _all_affine_direct_extensions__all_extensions(das,new_vertices,new_boundary,new_remaining_vertices,diagrams_go_here,start_rank=new_start_rank,start_idx=new_start_idx)
                 end
             end
@@ -604,13 +611,7 @@ module CoxeterDiagrams
                 println("Error reading file probably")
             else
                 das = DiagramAndSubs(D,rank)
-                #println(">> ", sum(das.connected_spherical .|> length), ", ", sum(das.connected_affine .|> length))
-                #println("> ", length(all_spherical_of_rank(das,das.d-1)), ", ", length(all_spherical_of_rank(das,das.d)), ", ", length(all_affine_of_rank(das,das.d-1)))
-                #dump_das(das;range=nothing)
-                #compact = is_compact(das)
-                #fin_vol = is_finite_volume(das)
                 (compact,fin_vol) = is_compact_respectively_finite_volume(das)
-                #@assert (compact,fin_vol) == (is_compact(das),is_finite_volume(das))
                 return (compact,fin_vol) 
             end
         end

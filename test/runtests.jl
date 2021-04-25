@@ -149,52 +149,7 @@ end
 
 end
 
-#=
-@testset "Right number of irreducible spherical/affine subdiagrams" begin
-    @testset "Known compactness/finite volume values" for row in CSV.Rows("../graphs/known_values.csv";
-                                                                          comment="#",
-                                                                          delim=";",
-                                                                          missingstring="",
-                                                                          types=[String,Int,Int,Int,Int,Int,Bool,Bool,Float64,String],ignoreemptylines=true)
-        @testset "$(row.graph_path)" begin
-            println(row.graph_path)
-            println(row)
 
-            path = row.graph_path 
-            s = open("../graphs/"*path) do file
-                read(file, String)
-            end
-
-            ret = CoxeterDiagrams.gug_coxiter_to_matrix(s)
-            if ret === nothing
-                println("Failed reading $path")
-            else
-                (D, rank) = ret
-                if D === nothing || rank === nothing
-                    println("Error reading file probably")
-                else
-                    das = DiagramAndSubs(D,rank)
-                    println(row.num_irred_sph)
-                    println(row.num_irred_aff)
-                    if !ismissing(row.num_irred_sph) 
-                        @test sum(das.connected_spherical .|> length) == row.num_irred_sph
-                    end
-                    if !ismissing(row.num_irred_aff) 
-                        @test  sum(das.connected_affine .|> length) == row.num_irred_aff
-                    end
-                    #println("> ", length(all_spherical_of_rank(das,das.d-1)), ", ", length(all_spherical_of_rank(das,das.d)), ", ", length(all_affine_of_rank(das,das.d-1)))
-                    #dump_das(das;range=nothing)
-                    #compact = is_compact(das)
-                    #fin_vol = is_finite_volume(das)
-                    #@assert (compact,fin_vol) == (is_compact(das),is_finite_volume(das))
-                end
-            end
-
-
-        end
-    end
-end
-=#
 
 @testset "Compactness/finite volume" begin
     @time begin
@@ -210,3 +165,55 @@ end
     end
     end
 end
+
+
+@testset "Right number of irreducible spherical/affine subdiagrams" begin
+    @testset "Known compactness/finite volume values" for row in CSV.Rows("../graphs/known_values.csv";
+                                                                          comment="#",
+                                                                          delim=";",
+                                                                          types=[String,Int,Int,Int,Int,Int,Bool,Bool,Float64,String],ignoreemptylines=true)
+        @testset "$(row.graph_path)" begin
+
+            path = row.graph_path 
+            s = open("../graphs/"*path) do file
+                read(file, String)
+            end
+
+            ret = CoxeterDiagrams.gug_coxiter_to_matrix(s)
+            if ret === nothing
+                println("Failed reading $path")
+            else
+                (D, rank) = ret
+                if D === nothing || rank === nothing
+                    println("Error reading file probably")
+                else
+                    das = DiagramAndSubs(D,rank)
+                    if !ismissing(row.num_irred_sph) 
+                        @test sum(das.connected_spherical .|> length) == row.num_irred_sph
+                    end
+                    if !ismissing(row.num_irred_aff) 
+                        @test  sum(das.connected_affine .|> length) == row.num_irred_aff
+                    end
+                    if !ismissing(row.num_sph_rank_dm) 
+                        @test  CoxeterDiagrams.all_spherical_of_rank(das,das.d-1) |> length  == row.num_sph_rank_dm
+                    end
+                    if !ismissing(row.num_sph_rank_d) 
+                        @test  CoxeterDiagrams.all_spherical_of_rank(das,das.d) |> length == row.num_sph_rank_d
+                    end
+                    if !ismissing(row.num_aff_rank_dm) 
+                        @test  CoxeterDiagrams.all_affine_of_rank(das,das.d-1) |> length == row.num_aff_rank_dm
+                    end
+                    #@test CoxeterDiagrams.is_compact_respectively_finite_volume(das) == (is_compact(das),is_finite_volume(das))
+                    #println("> ", length(all_spherical_of_rank(das,das.d-1)), ", ", length(all_spherical_of_rank(das,das.d)), ", ", length(all_affine_of_rank(das,das.d-1)))
+                    #dump_das(das;range=nothing)
+                    #compact = is_compact(das)
+                    #fin_vol = is_finite_volume(das)
+                    #@assert (compact,fin_vol) == (is_compact(das),is_finite_volume(das))
+                end
+            end
+
+
+        end
+    end
+end
+
