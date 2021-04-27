@@ -209,7 +209,7 @@ module CoxeterDiagrams
 
         elseif ds == deg_seq_D5 
             return DT_D
-        elseif n≥6 && ds == deg_seq_D(n) && length(extremities ∩ center_neighbors) ≥ 4
+        elseif n≥6 && ds == deg_seq_D(n)  && length(extremities ∩ center_neighbors) ≥ 4
             return DT_D
         else
             return nothing
@@ -387,30 +387,33 @@ module CoxeterDiagrams
                                 new_need_to_know_specific_vertices = true
 
                                 neighbors(w) = [i for i in collect(new_vertices) if i≠w && das.D[w,i]== 3]
-                                
-                                if  l == 3 &&
+                               
+
+                                if  (l == 3 || l == 4)  &&
                                     current.need_to_know_specific_vertices && 
                                     piece.need_to_know_specific_vertices &&
-                                    (isempty(current.degree_3) || isempty(piece.degree_3) ) && 
-                                    deg_seq_v ∈ [0,1,2] && old_deg_seq_u ∈ [0,1,2] && !(deg_seq_v == 2 && old_deg_seq_u == 2)
+                                    ( length(piece.degree_3) + length(current.degree_3) ≤ 2) && 
+                                    deg_seq_v ∈ [0,1,2,5] && old_deg_seq_u ∈ [0,1,2,5] 
 
-                                    new_degree_3 = current.degree_3 ∪ piece.degree_3
+                                    new_degree_3 = unique(current.degree_3 ∪ piece.degree_3)
                                     new_deg_seq_v == 3 && push!(new_degree_3,v)
                                     new_deg_seq_u == 3 && push!(new_degree_3,u)
-                                    if length(new_degree_3) > 1
+                                    if length(new_degree_3) > 2
                                         
                                         new_need_to_know_specific_vertices = false
                                         
                                     else
 
                                         new_degree_1 = current.degree_1_vertices ∪ piece.degree_1_vertices
-                                        old_deg_seq_u == 0 && push!(new_degree_1, u)
-                                        deg_seq_v == 0 && push!(new_degree_1, v)
+                                        l == 3 && old_deg_seq_u == 0 && push!(new_degree_1, u)
+                                        l == 3 && deg_seq_v == 0 && push!(new_degree_1, v)
                                         old_deg_seq_u == 1 && u ∈ new_degree_1 && popat!(new_degree_1, findfirst(==(u),new_degree_1))
                                         deg_seq_v == 1 && v ∈ new_degree_1 && popat!(new_degree_1, findfirst(==(v),new_degree_1))
 
-                                        new_degree_1_n = ∪(Int64[],[neighbors(w) for w in new_degree_1]...) 
-                                        new_degree_3_n = ∪(Int64[],[neighbors(w) for w in new_degree_3]...) 
+                                        new_degree_1 = unique(new_degree_1)
+
+                                        new_degree_1_n = unique(∪(Int64[],[neighbors(w) for w in new_degree_1]...) )
+                                        new_degree_3_n = unique(∪(Int64[],[neighbors(w) for w in new_degree_3]...) )
 
                                     end 
                                     
@@ -418,23 +421,16 @@ module CoxeterDiagrams
                                     new_need_to_know_specific_vertices = false
                                 end
                                  
-                                deg_seq_and_assoc_me = (new_gen_deg_seq,SBitSet{4}(new_degree_1),SBitSet{4}(new_degree_1_n),SBitSet{4}(new_degree_3),SBitSet{4}(new_degree_3_n))
-                                deg_seq_and_assoc = build_deg_seq_and_associated_data(new_vertices,das.D)
-                                if deg_seq_and_assoc ≠ nothing
-                                    
-                                    
-                                    if deg_seq_and_assoc_me ≠ deg_seq_and_assoc
-
-                                        #println(deg_seq_and_assoc_me, "   vs   ", deg_seq_and_assoc)
-                                        #@assert false
-                                    end
-
-                                end
+                                deg_seq_and_assoc = (new_gen_deg_seq,SBitSet{4}(new_degree_1),SBitSet{4}(new_degree_1_n),SBitSet{4}(new_degree_3),SBitSet{4}(new_degree_3_n))
+                                     
                                 
                                 new_type = connected_diagram_type(new_vertices,das.D, only_sporadic=is_sporadic(piece.type) || is_sporadic(current.type), deg_seq_and_assoc=deg_seq_and_assoc)
+                                new_deg_1 = new_need_to_know_specific_vertices ? new_degree_1 : Int64[]
+                                new_deg_3 = new_need_to_know_specific_vertices ? new_degree_3 : Int64[]
+
 
                                 if !isnothing(new_type)
-                                    new_cisd = CISD(new_vertices,new_boundary,new_type, new_gen_deg_seq, new_need_to_know_specific_vertices, new_degree_1,new_degree_3)
+                                    new_cisd = CISD(new_vertices,new_boundary,new_type, new_gen_deg_seq, new_need_to_know_specific_vertices, new_deg_1, new_deg_3)
                                     
                                     (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
 
