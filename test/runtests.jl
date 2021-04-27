@@ -145,6 +145,7 @@ end
     ]  
 
     for (rank,mat,compact,fin_vol) in list
+        println(rank, ", ", mat)
         das = CoxeterDiagrams.DiagramAndSubs(mat,rank)
         @test compact == CoxeterDiagrams.is_compact(das)
         @test fin_vol == CoxeterDiagrams.is_finite_volume(das)

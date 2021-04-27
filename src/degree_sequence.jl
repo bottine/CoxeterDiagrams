@@ -114,8 +114,10 @@ Otherwise, return `nothing`
 Add an edge with label ``l`` to a degree, if it results in a legal degree for a spherical/affine irreducible diagram.
 Otherwise, return `nothing`
 """
-@inline function push_label(n::GenDeg,l::Int)::Union{GenDeg,Nothing} 
-    if l == 3
+@inline function push_label(n::GenDeg,l::Int)::Union{GenDeg,Nothing}
+    if l == 2
+        return n
+    elseif l == 3
         return push_three(n)
     elseif l == 4
         return push_four(n)
@@ -161,7 +163,7 @@ end
 Encode the "generalized degree" given by `vv` into an object of type `GenDeg` if possible (if the resulting generalized degree can appear in a spherical/affine irreducible diagram).
 """
 function short_vec_to_deg(vv::Vector{Int})::Union{Int,Nothing}
-    @assert length(vv) ≤ 4
+    #@assert length(vv) ≤ 4
     res = empty_deg
     for v in vv
         res = push_label(res,v)
@@ -226,9 +228,9 @@ end
 """
 function update!(ds::GenDegSeq,from::GenDeg,to::GenDeg)
     @assert from ≤ to "Can only increase degree" 
-    idx = searchsortedfirst(ds,from)
+    idx = searchsortedfirst(ds.content,from)
     @assert 1 ≤ idx && idx ≤ length(ds.content) && ds.content[idx] == from
-    ds.content[idx] = from
+    ds.content[idx] = to
     sort!(ds.content)
 end
 
@@ -257,7 +259,7 @@ end
 Given the `Vector` of `Vector` of `Int`s `vv`, return the associated degree sequence (each vector of integers represents a generalized degree).
 """
 function deg_seq(vv::Vector{Vector{Int}})
-    @assert all(length(v) ≤ 4 for v in vv)
+    #@assert all(length(v) ≤ 4 for v in vv)
     sorted_vv = [short_vec_to_deg(v) for v in vv]
     return GenDegSeq(sort(sorted_vv))
 end

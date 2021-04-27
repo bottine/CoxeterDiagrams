@@ -42,17 +42,19 @@ module CoxeterDiagrams
         boundary::SBitSet{4}
         type::DiagramType
         degree_sequence::GenDegSeq
-        degree_1_vertices::Vector{UInt16}
-        degree_3_neighbors::Vector{UInt16}
+        need_to_know_specific_vertices::Bool
+        degree_1_vertices::Vector{Int}
+        degree_1_neighbors::Vector{Int}
+        degree_3_neighbors::Vector{Int}
     end
     CISD = ConnectedInducedSubDiagram
 
     function ConnectedInducedSubDiagram(vertices::SBitSet{4},boundary::SBitSet{4},type::DiagramType)
-        ConnectedInducedSubDiagram(vertices,boundary,type,GenDegSeq(GenDeg[]),UInt16[],UInt16[])
+        ConnectedInducedSubDiagram(vertices,boundary,type,GenDegSeq(GenDeg[]),false,[],[],[])
     end
 
     function ConnectedInducedSubDiagram(v::Int)
-        ConnectedInducedSubDiagram(SBitSet{4}(),SBitSet{4}(),DT_a,GenDegSeq([empty_deg]),UInt16[],UInt16[])
+        ConnectedInducedSubDiagram(SBitSet{4}(v),SBitSet{4}(v),DT_a,GenDegSeq([empty_deg]),[],[],[])
     end
     function Base.:(==)(a::CISD,b::CISD)
         # TODO? add the das in CISD so that we can only compare CISDs when they lie in the same DAS?
@@ -296,7 +298,7 @@ module CoxeterDiagrams
             end
         end
         
-        _extend!__all_extensions(das,singleton_v,CISD(singleton_v,boundary_v,DT_a),1,0,new_spherical,new_affine)
+        _extend!__all_extensions(das,new_vertex,singleton_v,empty_deg,CISD(singleton_v,boundary_v,DT_a,GenDegSeq([empty_deg]),true,[],[],[]),1,0,new_spherical,new_affine)
        
         for i in 1:das.d
             append!(das.connected_spherical[i],new_spherical[i])
@@ -307,7 +309,9 @@ module CoxeterDiagrams
     # compute all possible CISD extensions of `current` and put them in `new_spherical`/`new_affine`
     function _extend!__all_extensions(
         das::DiagramAndSubs,
+        v::Int,
         singleton_v,
+        deg_seq_v::GenDeg,
         current::CISD,
         current_card::Int,
         current_num_pieces::Int,
@@ -320,8 +324,11 @@ module CoxeterDiagrams
         if current_card > das.d
             return
         end
-
-        
+       
+        #println("")
+        #println("Extending for vertex $v")
+        #println("currently $current")
+         
             
         if is_spherical(current.type)
             #spherical, so pushed there
@@ -333,20 +340,84 @@ module CoxeterDiagrams
                 @inbounds for card in start_card:length(das.connected_spherical)-current_card+1 # maybe can remove the +1, but it's probably needed for the affine diagrams
                     @inbounds for piece_idx in start_piece_idx:length(das.connected_spherical[card])
                         piece = das.connected_spherical[card][piece_idx]
+                        #println("")
+                        #println("Extending for vertex $v")
+                        #println("currently $current")
+                        #println("piec is   $piece")
                         if isempty(piece.vertices∩current.vertices) &&  piece.boundary∩current.vertices == singleton_v
+                            
+                            #println("intersect nicely OK")
                             
                             new_vertices = piece.vertices ∪ current.vertices
                             new_boundary = ((piece.boundary ∩ ~current.vertices) ∪ (current.boundary ∩ ~piece.vertices))
-                            new_type = connected_diagram_type(new_vertices,das.D)
 
-                            if !isnothing(new_type)
-                                new_cisd = CISD(new_vertices,new_boundary,new_type)
-                                new_card = current_card+card
-                                new_num_pieces = current_num_pieces + 1
+                            new_edges = collect(piece.vertices ∩ current.boundary) # all neighbors of v in the new piece we're considering
+                            num_new_edges = length(new_edges)
+                            new_card = current_card+card
+                            new_num_pieces = current_num_pieces + 1
+                            
+                            #println("new edges are $new_edges")
+                            #println("num new edges are $num_new_edges")
+
+                            if num_new_edges > 2
+                                continue
+                            elseif num_new_edges == 2 # special case: the only legal way here is if we're closing a diagram of type DT_a to one of type DT_A
+                                piece.type == DT_a || continue
+                                current_card == 1 || continue
+                                (das.D[v,new_edges[1]] == 3 && das.D[v,new_edges[2]] == 3) || continue
+                                new_edges == piece.degree_1_vertices || continue
                                 
+                                # special case, so we push and are done
+                                push!(new_affine[new_card-1],CISD(new_vertices,new_boundary,DT_A))
+                            else
+                                    
+                                # only one new edge.
+                                u = new_edges[1]
+                                old_deg_seq_u = short_vec_to_deg(das.D[u,filter(≠(u),collect(piece.vertices))])
+                                l = das.D[v,u]
+
+                                #println("only one new edge")
+                                #println("it's $u with label $l")
                                 
-                                (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
-                                _extend!__all_extensions(das,singleton_v,new_cisd,new_card,new_num_pieces,new_spherical,new_affine,start_card=new_start_card,start_piece_idx=new_start_piece_idx)
+                                new_deg_seq_v = push_label(deg_seq_v,l) 
+                                new_deg_seq_u = push_label(old_deg_seq_u,l)
+                                
+
+                                new_gen_deg_seq = current.degree_sequence + piece.degree_sequence
+                                !isnothing(new_deg_seq_v) && update!(new_gen_deg_seq,deg_seq_v,new_deg_seq_v)
+                                !isnothing(new_deg_seq_u) && update!(new_gen_deg_seq,old_deg_seq_u,new_deg_seq_u)
+                               
+                                new_degree_1 = Int[]
+                                new_degree_1_n = Int[]
+                                new_degree_3_n = Int[]
+                                if current.need_to_know_specific_vertices && l == 3 && false 
+
+                                end
+                                
+
+                                
+                                deg_seq_and_assoc = build_deg_seq_and_associated_data(new_vertices,das.D)
+                                if deg_seq_and_assoc ≠ nothing
+
+                                    new_degree_1 = deg_seq_and_assoc[2] |> collect
+                                    new_degree_1_n = deg_seq_and_assoc[3] |> collect
+                                    new_degree_3_n = deg_seq_and_assoc[5] |> collect
+
+                                    @assert deg_seq_and_assoc[1] == new_gen_deg_seq
+                                end
+
+                                new_type = connected_diagram_type(new_vertices,das.D)
+
+                                if !isnothing(new_type)
+                                    new_cisd = CISD(new_vertices,new_boundary,new_type, new_gen_deg_seq, current.need_to_know_specific_vertices, new_degree_1, new_degree_1_n, new_degree_3_n)
+                                    
+                                    (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
+
+                                    #println("continuing with $new_cisd")
+                                    _extend!__all_extensions(das,v,singleton_v,new_deg_seq_v,new_cisd,new_card,new_num_pieces,new_spherical,new_affine,start_card=new_start_card,start_piece_idx=new_start_piece_idx)
+                                end
+
+                               
                             end
 
                         end
@@ -683,18 +754,26 @@ module CoxeterDiagrams
         dot_string = """
     strict graph {
         layout=neato
-        node [shape=point];
         """
+
+        for i in 1:m
+            dot_string = dot_string * "\tnode [shape=circle,label=\"$i\"] $i;\n"
+        end
+
 
         function label_to_edge_type(k)
             if k == 1
-                return "[style=dotted,label=$k,weight=0]"
+                #return "[style=dotted,label=$k,weight=0]"
+                return "[style=dotted,weight=0]"
             elseif k == 0
-                return "[penwidth=3,label=$k,weight=2]"
+                #return "[penwidth=3,label=$k,weight=2]"
+                return "[penwidth=3,weight=2]"
             elseif k == 3
-                return "[label=$k]"
+                #return "[label=$k]"
+                return ""
             elseif k > 3
-                return "[color = \"" * "black:invis:"^(k-3) * ":black\",label=$k]"
+                #return "[color = \"" * "black:invis:"^(k-3) * ":black\",label=$k]"
+                return "[color = \"" * "black:invis:"^(k-3) * ":black\"]"
             end
         end
 
