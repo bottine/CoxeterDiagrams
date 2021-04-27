@@ -1,3 +1,8 @@
+* in `extend!_all_extensions`, make the code that constructs the degree sequence and associated data into a function, for clarity.
+* Make the vectors `deg_1_vertices` and others into a custom "small set" type and use it everywhere  to reduce allocations etc
+* Drop more bad diagrams in `extend!_all_extensions` if possible
+
+
 * Make `all_spherical_of_rank` into an iterator using `@resumable` (same for `all_affine_of_rank` and `all_spherical_direct_extensions` and `all_affine_direct_extensions`) so that:
     * Iterating allocates less
     * Can short-circuit the iteration as soon as needed

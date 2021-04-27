@@ -43,17 +43,17 @@ module CoxeterDiagrams
         type::DiagramType
         degree_sequence::GenDegSeq
         need_to_know_specific_vertices::Bool
-        degree_1_vertices::Vector{Int}
-        degree_3::Vector{Int}
+        degree_1_vertices::SBitSet{4}
+        degree_3::SBitSet{4}
     end
     CISD = ConnectedInducedSubDiagram
 
     function ConnectedInducedSubDiagram(vertices::SBitSet{4},boundary::SBitSet{4},type::DiagramType)
-        ConnectedInducedSubDiagram(vertices,boundary,type,GenDegSeq(GenDeg[]),false,[],[])
+        ConnectedInducedSubDiagram(vertices,boundary,type,GenDegSeq(GenDeg[]),false,SBitSet{4}(),SBitSet{4}())
     end
 
     function ConnectedInducedSubDiagram(v::Int)
-        ConnectedInducedSubDiagram(SBitSet{4}(v),SBitSet{4}(v),DT_a,GenDegSeq([empty_deg]),[],[])
+        ConnectedInducedSubDiagram(SBitSet{4}(v),SBitSet{4}(v),DT_a,GenDegSeq([empty_deg]),SBitSet{4}(),SBitSet{4}())
     end
     function Base.:(==)(a::CISD,b::CISD)
         # TODO? add the das in CISD so that we can only compare CISDs when they lie in the same DAS?
@@ -280,7 +280,7 @@ module CoxeterDiagrams
         
         # Extend D with v
         das.D = [das.D v]
-        das.D = [das.D; [v;1]']
+        das.D = [das.D; [v;2]']
        
         new_vertex = n+1
         singleton_v = SBitSet{4}(new_vertex)
@@ -295,7 +295,7 @@ module CoxeterDiagrams
             end
         end
         
-        _extend!__all_extensions(das,new_vertex,singleton_v,empty_deg,CISD(singleton_v,boundary_v,DT_a,GenDegSeq([empty_deg]),true,[],[]),1,0,new_spherical,new_affine)
+        _extend!__all_extensions(das,new_vertex,singleton_v,empty_deg,CISD(singleton_v,boundary_v,DT_a,GenDegSeq([empty_deg]),true,SBitSet{4}(),SBitSet{4}()),1,0,new_spherical,new_affine)
        
         for i in 1:das.d
             append!(das.connected_spherical[i],new_spherical[i])
@@ -321,7 +321,8 @@ module CoxeterDiagrams
         if current_card > das.d
             return
         end
-       
+        
+
         #println("")
         #println("Extending for vertex $v")
         #println("currently $current")
@@ -344,7 +345,8 @@ module CoxeterDiagrams
                             new_vertices = piece.vertices ∪ current.vertices
                             new_boundary = ((piece.boundary ∩ ~current.vertices) ∪ (current.boundary ∩ ~piece.vertices))
 
-                            new_edges = collect(piece.vertices ∩ current.boundary) # all neighbors of v in the new piece we're considering
+                            new_edges = piece.vertices ∩ current.boundary # all neighbors of v in the new piece we're considering
+                            new_edges_col = collect(new_edges)
                             num_new_edges = length(new_edges)
                             new_card = current_card+card
                             new_num_pieces = current_num_pieces + 1
@@ -355,16 +357,27 @@ module CoxeterDiagrams
                             elseif num_new_edges == 2 # special case: the only legal way here is if we're closing a diagram of type DT_a to one of type DT_A
                                 piece.type == DT_a || continue
                                 current_card == 1 || continue
-                                (das.D[v,new_edges[1]] == 3 && das.D[v,new_edges[2]] == 3) || continue
-                                sort(new_edges) == sort(piece.degree_1_vertices) || continue
+                                (das.D[v,new_edges_col[1]] == 3 && das.D[v,new_edges_col[2]] == 3) || continue
+                                new_edges == piece.degree_1_vertices || continue
                                 
                                 # special case, so we push and are done
                                 push!(new_affine[new_card-1],CISD(new_vertices,new_boundary,DT_A))
                             else
-                                    
+                                
+                                new_edges_col = collect(new_edges)
+
+
                                 # only one new edge.
-                                u = new_edges[1]
-                                old_deg_seq_u = short_vec_to_deg(das.D[u,filter(≠(u),collect(piece.vertices))])
+                                u = new_edges_col[1]
+                                singleton_u = SBitSet{4}(u)
+
+                                old_deg_seq_u = 0
+                                for w in piece.vertices
+                                    if w ≠ u && das.D[u,w] ≠ 2
+                                        old_deg_seq_u = push_label(old_deg_seq_u,das.D[u,w]) 
+                                    end
+                                end
+
                                 l = das.D[v,u]
 
                                 #println("only one new edge")
@@ -380,24 +393,25 @@ module CoxeterDiagrams
                                 update!(new_gen_deg_seq,deg_seq_v,new_deg_seq_v)
                                 update!(new_gen_deg_seq,old_deg_seq_u,new_deg_seq_u)
                                
-                                new_degree_1 = Int[]
-                                new_degree_3 = Int[]
-                                new_degree_1_n = Int[]
-                                new_degree_3_n = Int[]
+                                new_degree_1 = SBitSet{4}()
+                                new_degree_3 = SBitSet{4}()
+                                new_degree_1_n = SBitSet{4}()
+                                new_degree_3_n = SBitSet{4}()
                                 new_need_to_know_specific_vertices = true
 
-                                neighbors(w) = [i for i in collect(new_vertices) if i≠w && das.D[w,i]== 3]
+                                neighbors(w) = SBitSet{4}([i for i in new_vertices if i≠w && das.D[w,i]== 3])
                                
 
                                 if  (l == 3 || l == 4)  &&
                                     current.need_to_know_specific_vertices && 
                                     piece.need_to_know_specific_vertices &&
                                     ( length(piece.degree_3) + length(current.degree_3) ≤ 2) && 
-                                    deg_seq_v ∈ [0,1,2,5] && old_deg_seq_u ∈ [0,1,2,5] 
+                                    deg_seq_v ∈ (0,1,2,5) && old_deg_seq_u ∈ (0,1,2,5) 
 
-                                    new_degree_3 = unique(current.degree_3 ∪ piece.degree_3)
-                                    new_deg_seq_v == 3 && push!(new_degree_3,v)
-                                    new_deg_seq_u == 3 && push!(new_degree_3,u)
+                                    new_degree_3 = current.degree_3 ∪ piece.degree_3
+                                    new_deg_seq_v == 3 && (new_degree_3 = new_degree_3 ∪ singleton_v)
+                                    new_deg_seq_u == 3 && (new_degree_3 = new_degree_3 ∪ singleton_u)
+                                    
                                     if length(new_degree_3) > 2
                                         
                                         new_need_to_know_specific_vertices = false
@@ -405,15 +419,20 @@ module CoxeterDiagrams
                                     else
 
                                         new_degree_1 = current.degree_1_vertices ∪ piece.degree_1_vertices
-                                        l == 3 && old_deg_seq_u == 0 && push!(new_degree_1, u)
-                                        l == 3 && deg_seq_v == 0 && push!(new_degree_1, v)
-                                        old_deg_seq_u == 1 && u ∈ new_degree_1 && popat!(new_degree_1, findfirst(==(u),new_degree_1))
-                                        deg_seq_v == 1 && v ∈ new_degree_1 && popat!(new_degree_1, findfirst(==(v),new_degree_1))
+                                        l == 3 && old_deg_seq_u == 0 && (new_degree_1 = new_degree_1 ∪ singleton_u)
+                                        l == 3 && deg_seq_v == 0 && (new_degree_1 = new_degree_1 ∪ singleton_v)
+                                        old_deg_seq_u == 1 && u ∈ new_degree_1 && (new_degree_1 = new_degree_1 ∩ ~ singleton_u)
+                                        deg_seq_v == 1 && v ∈ new_degree_1 && (new_degree_1 = new_degree_1 ∩ ~ singleton_v)
 
-                                        new_degree_1 = unique(new_degree_1)
 
-                                        new_degree_1_n = unique(∪(Int64[],[neighbors(w) for w in new_degree_1]...) )
-                                        new_degree_3_n = unique(∪(Int64[],[neighbors(w) for w in new_degree_3]...) )
+                                        new_degree_1_n = SBitSet{4}()
+                                        for w in new_degree_1
+                                            new_degree_1_n = new_degree_1_n ∪ neighbors(w)
+                                        end
+                                        new_degree_3_n = SBitSet{4}()
+                                        for w in new_degree_3
+                                            new_degree_3_n = new_degree_3_n ∪ neighbors(w)
+                                        end
 
                                     end 
                                     
@@ -421,12 +440,12 @@ module CoxeterDiagrams
                                     new_need_to_know_specific_vertices = false
                                 end
                                  
-                                deg_seq_and_assoc = (new_gen_deg_seq,SBitSet{4}(new_degree_1),SBitSet{4}(new_degree_1_n),SBitSet{4}(new_degree_3),SBitSet{4}(new_degree_3_n))
+                                deg_seq_and_assoc = (new_gen_deg_seq,new_degree_1,new_degree_1_n,new_degree_3,new_degree_3_n)
                                      
                                 
                                 new_type = connected_diagram_type(new_vertices,das.D, only_sporadic=is_sporadic(piece.type) || is_sporadic(current.type), deg_seq_and_assoc=deg_seq_and_assoc)
-                                new_deg_1 = new_need_to_know_specific_vertices ? new_degree_1 : Int64[]
-                                new_deg_3 = new_need_to_know_specific_vertices ? new_degree_3 : Int64[]
+                                new_deg_1 = new_need_to_know_specific_vertices ? new_degree_1 : SBitSet{4}()
+                                new_deg_3 = new_need_to_know_specific_vertices ? new_degree_3 : SBitSet{4}()
 
 
                                 if !isnothing(new_type)
