@@ -44,17 +44,16 @@ module CoxeterDiagrams
         degree_sequence::GenDegSeq
         need_to_know_specific_vertices::Bool
         degree_1_vertices::Vector{Int}
-        degree_1_neighbors::Vector{Int}
-        degree_3_neighbors::Vector{Int}
+        degree_3::Vector{Int}
     end
     CISD = ConnectedInducedSubDiagram
 
     function ConnectedInducedSubDiagram(vertices::SBitSet{4},boundary::SBitSet{4},type::DiagramType)
-        ConnectedInducedSubDiagram(vertices,boundary,type,GenDegSeq(GenDeg[]),false,[],[],[])
+        ConnectedInducedSubDiagram(vertices,boundary,type,GenDegSeq(GenDeg[]),false,[],[])
     end
 
     function ConnectedInducedSubDiagram(v::Int)
-        ConnectedInducedSubDiagram(SBitSet{4}(v),SBitSet{4}(v),DT_a,GenDegSeq([empty_deg]),[],[],[])
+        ConnectedInducedSubDiagram(SBitSet{4}(v),SBitSet{4}(v),DT_a,GenDegSeq([empty_deg]),[],[])
     end
     function Base.:(==)(a::CISD,b::CISD)
         # TODO? add the das in CISD so that we can only compare CISDs when they lie in the same DAS?
@@ -298,7 +297,7 @@ module CoxeterDiagrams
             end
         end
         
-        _extend!__all_extensions(das,new_vertex,singleton_v,empty_deg,CISD(singleton_v,boundary_v,DT_a,GenDegSeq([empty_deg]),true,[],[],[]),1,0,new_spherical,new_affine)
+        _extend!__all_extensions(das,new_vertex,singleton_v,empty_deg,CISD(singleton_v,boundary_v,DT_a,GenDegSeq([empty_deg]),true,[],[]),1,0,new_spherical,new_affine)
        
         for i in 1:das.d
             append!(das.connected_spherical[i],new_spherical[i])
@@ -382,17 +381,16 @@ module CoxeterDiagrams
                                 new_deg_seq_v = push_label(deg_seq_v,l) 
                                 new_deg_seq_u = push_label(old_deg_seq_u,l)
                                 
+                                isnothing(new_deg_seq_v) && continue
+                                isnothing(new_deg_seq_u) && continue
 
                                 new_gen_deg_seq = current.degree_sequence + piece.degree_sequence
-                                !isnothing(new_deg_seq_v) && update!(new_gen_deg_seq,deg_seq_v,new_deg_seq_v)
-                                !isnothing(new_deg_seq_u) && update!(new_gen_deg_seq,old_deg_seq_u,new_deg_seq_u)
+                                update!(new_gen_deg_seq,deg_seq_v,new_deg_seq_v)
+                                update!(new_gen_deg_seq,old_deg_seq_u,new_deg_seq_u)
                                
                                 new_degree_1 = Int[]
-                                new_degree_1_n = Int[]
-                                new_degree_3_n = Int[]
-                                if current.need_to_know_specific_vertices && l == 3 && false 
-
-                                end
+                                new_degree_3 = Int[]
+                                new_need_to_know_specific_vertices = true
                                 
 
                                 
@@ -400,16 +398,15 @@ module CoxeterDiagrams
                                 if deg_seq_and_assoc ≠ nothing
 
                                     new_degree_1 = deg_seq_and_assoc[2] |> collect
-                                    new_degree_1_n = deg_seq_and_assoc[3] |> collect
-                                    new_degree_3_n = deg_seq_and_assoc[5] |> collect
+                                    new_degree_3 = deg_seq_and_assoc[4] |> collect
 
                                     @assert deg_seq_and_assoc[1] == new_gen_deg_seq
                                 end
 
-                                new_type = connected_diagram_type(new_vertices,das.D)
+                                new_type = connected_diagram_type(new_vertices,das.D, only_sporadic=is_sporadic(piece.type) || is_sporadic(current.type))
 
                                 if !isnothing(new_type)
-                                    new_cisd = CISD(new_vertices,new_boundary,new_type, new_gen_deg_seq, current.need_to_know_specific_vertices, new_degree_1, new_degree_1_n, new_degree_3_n)
+                                    new_cisd = CISD(new_vertices,new_boundary,new_type, new_gen_deg_seq, current.need_to_know_specific_vertices, new_degree_1,new_degree_3)
                                     
                                     (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
 
