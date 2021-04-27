@@ -296,7 +296,7 @@ module CoxeterDiagrams
             end
         end
         
-        _extend!__all_extensions(das,singleton_v,singleton_v,boundary_v,1,0,new_spherical,new_affine)
+        _extend!__all_extensions(das,singleton_v,CISD(singleton_v,boundary_v,DT_a),1,0,new_spherical,new_affine)
        
         for i in 1:das.d
             append!(das.connected_spherical[i],new_spherical[i])
@@ -308,8 +308,7 @@ module CoxeterDiagrams
     function _extend!__all_extensions(
         das::DiagramAndSubs,
         singleton_v,
-        current_vertices::SBitSet{4},
-        current_boundary::SBitSet{4},
+        current::CISD,
         current_card::Int,
         current_num_pieces::Int,
         new_spherical,
@@ -322,52 +321,54 @@ module CoxeterDiagrams
             return
         end
 
-        # Is `current` a valid connected diagram?
-        current_type = connected_diagram_type(current_vertices,das.D)
-
-        if !isnothing(current_type)
-            # if here, it is a valid connected diagram, which we "wrap" in a nice type
-            current_cisd = CISD(current_vertices,current_boundary,current_type,GenDegSeq([]),UInt16[],UInt16[])
+        
             
-            if is_spherical(current_type)
-                #spherical, so pushed there
-                #@assert current_cisd ∉ new_spherical[current_card]
-                push!(new_spherical[current_card],current_cisd)
-                
-                if current_num_pieces < 3
-                    #since spherical, can (probably) be extended:
-                    @inbounds for card in start_card:length(das.connected_spherical)-current_card+1 # maybe can remove the +1, but it's probably needed for the affine diagrams
-                        @inbounds for piece_idx in start_piece_idx:length(das.connected_spherical[card])
-                            piece = das.connected_spherical[card][piece_idx]
-                            if isempty(piece.vertices∩current_vertices) &&  piece.boundary∩current_vertices == singleton_v
-                                
-                                new_vertices = piece.vertices ∪ current_vertices
-                                new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+        if is_spherical(current.type)
+            #spherical, so pushed there
+            #@assert current_cisd ∉ new_spherical[current_card]
+            push!(new_spherical[current_card],current)
+            
+            if current_num_pieces < 3
+                #since spherical, can (probably) be extended:
+                @inbounds for card in start_card:length(das.connected_spherical)-current_card+1 # maybe can remove the +1, but it's probably needed for the affine diagrams
+                    @inbounds for piece_idx in start_piece_idx:length(das.connected_spherical[card])
+                        piece = das.connected_spherical[card][piece_idx]
+                        if isempty(piece.vertices∩current.vertices) &&  piece.boundary∩current.vertices == singleton_v
+                            
+                            new_vertices = piece.vertices ∪ current.vertices
+                            new_boundary = ((piece.boundary ∩ ~current.vertices) ∪ (current.boundary ∩ ~piece.vertices))
+                            new_type = connected_diagram_type(new_vertices,das.D)
+
+                            if !isnothing(new_type)
+                                new_cisd = CISD(new_vertices,new_boundary,new_type)
                                 new_card = current_card+card
                                 new_num_pieces = current_num_pieces + 1
                                 
+                                
                                 (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
-                                _extend!__all_extensions(das,singleton_v,new_vertices,new_boundary,new_card,new_num_pieces,new_spherical,new_affine,start_card=new_start_card,start_piece_idx=new_start_piece_idx)
+                                _extend!__all_extensions(das,singleton_v,new_cisd,new_card,new_num_pieces,new_spherical,new_affine,start_card=new_start_card,start_piece_idx=new_start_piece_idx)
                             end
+
                         end
-                        start_piece_idx = 1
-                    end               
-                end
-
-            elseif is_affine(current_type)
-                #affine, so pushed there
-                #@assert current_cisd ∉ new_affine[current_card-1]
-                push!(new_affine[current_card-1],current_cisd)
-            else
-                @assert false "Diagram either affine or spherical"
+                    end
+                    start_piece_idx = 1
+                end               
             end
+
+        elseif is_affine(current.type)
+            #affine, so pushed there
+            #@assert current_cisd ∉ new_affine[current_card-1]
+            push!(new_affine[current_card-1],current)
         else
-            # `current` is invalid (thus cannot be extended to something valid, bye)
+            @assert false "Diagram either affine or spherical"
         end
+            # `current` is invalid (thus cannot be extended to something valid, bye)
+
+        
     end
 
-    function _merge_deg_seqs_etc()
-    end
+    
+
 
     function DiagramAndSubs(dimension::Int)
         D = reshape(UInt16[],(0,0))
