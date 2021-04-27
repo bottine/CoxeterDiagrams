@@ -8,6 +8,10 @@ CD = CoxeterDiagrams
 CISD = CD.ConnectedInducedSubDiagram
 SBS = CD.SBitSet{4}
 
+@testset "Degree Sequences" begin
+    
+end
+
 @testset "Some randomized Coxeter matrix isomorphism checks" begin
    
     max_card = 20

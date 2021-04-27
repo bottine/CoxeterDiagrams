@@ -197,6 +197,11 @@ function Base.push!(ds::GenDegSeq,v::GenDeg)
     return ds
 end
 
+function Base.append!(ds1::GenDegSeq,ds2::GenDegSeq)
+    append!(ds1.content,ds2.content)
+    sort!(ds1.content)
+end
+
 """
     +(ds1,ds2)
 
@@ -214,6 +219,17 @@ Concatenate `k` copies of the degree sequence `ds` together.
 function Base.:*(k::Int,ds::GenDegSeq)
     @assert k≥0
     GenDegSeq(reduce(vcat,[[v for i in 1:k] for v in ds.content]))
+end
+
+"""
+    update!()
+"""
+function update!(ds::GenDegSeq,from::GenDeg,to::GenDeg)
+    @assert from ≤ to "Can only increase degree" 
+    idx = searchsortedfirst(ds,from)
+    @assert 1 ≤ idx && idx ≤ length(ds.content) && ds.content[idx] == from
+    ds.content[idx] = from
+    sort!(ds.content)
 end
 
 """
