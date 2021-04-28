@@ -723,6 +723,24 @@ module CoxeterDiagrams
         return (compact,fin_vol)
     end
 
+    function f_vector(das::DiagramAndSubs)
+        # TODO: this can be made faster by :
+        # * first writing a method `all_spherical` that enumerates all spherical
+        # * using this function and adding to the coordinate corresponding to the rank of each diagram we get
+        f_vector = Int64[]
+        for i in 1:das.d-1 
+            push!(f_vector,length(CoxeterDiagrams.all_spherical_of_rank(das,i)))
+        end
+        
+        push!(f_vector,length(CoxeterDiagrams.all_spherical_of_rank(das,das.d)))
+        f_vector[end] += length(CoxeterDiagrams.all_affine_of_rank(das,das.d-1))
+        reverse!(f_vector)
+        push!(f_vector,1)
+
+        return f_vector
+    end
+
+
     function is_compact_respectively_finite_volume(path::String)
         
         s = open(path) do file

@@ -55,6 +55,7 @@ end
 
 end
 
+
 @testset "One specific example" begin
     mat = [2 3 3 2 2 2 2;
            3 2 3 2 2 2 2;
@@ -145,7 +146,6 @@ end
     ]  
 
     for (rank,mat,compact,fin_vol) in list
-        println(rank, ", ", mat)
         das = CoxeterDiagrams.DiagramAndSubs(mat,rank)
         @test compact == CoxeterDiagrams.is_compact(das)
         @test fin_vol == CoxeterDiagrams.is_finite_volume(das)
@@ -154,6 +154,73 @@ end
 
 end
 
+@testset "More random matrices" begin
+    for rank in 2:13, size in 5:20, round in 1:10
+        M = rand([0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,3,3,4,5,6,7,8],size,size); M = tril(M); M = M + M'
+        das = DiagramAndSubs(M,rank)
+        compact,fin_vol = is_compact_respectively_finite_volume(das)
+
+        @testset "is_compact_respectively_finite_volume agrees with is_compact and is_finite_volume" begin
+            @test compact == is_compact(das)
+            @test fin_vol == is_finite_volume(das)
+        end
+
+        
+        @testset "Computing direct extensions is the same as filtering over the candidate extensions" for i in 1:rank-1 
+            all_sph_i = CoxeterDiagrams.all_spherical_of_rank(das,i)
+            all_sph_ip = CoxeterDiagrams.all_spherical_of_rank(das,i+1)
+            all_aff_i = CoxeterDiagrams.all_affine_of_rank(das,i)
+            for sph in all_sph_i
+                ext_sph_1 = CoxeterDiagrams.all_spherical_direct_extensions(das,sph)
+                ext_sph_2 = [sph2 for sph2 in all_sph_ip if sph ⊆ sph2]
+                @test Set(ext_sph_1) == Set(ext_sph_2) 
+                ext_aff_1 = CoxeterDiagrams.all_affine_direct_extensions(das,sph)
+                ext_aff_2 = [aff2 for aff2 in all_aff_i if sph ⊆ aff2]
+                @test Set(ext_aff_1) == Set(ext_aff_2) 
+            end
+        end
+
+    end
+end
+
+@testset "f-vector must ±sum to 1" begin
+    @time begin
+    @testset "On known diagrams" for row in CSV.Rows("../graphs/known_values.csv";
+                                                                          comment="#",
+                                                                          delim=";",
+                                                                          missingstring="",
+                                                                          types=[String,Int,Int,Int,Int,Int,Bool,Bool,Float64,String],ignoreemptylines=true)
+        if !occursin("drop",row.graph_path) 
+        @testset "$(row.graph_path)" begin
+            println("$(row.graph_path)")
+            path = row.graph_path 
+            s = open("../graphs/"*path) do file
+                read(file, String)
+            end
+
+            ret = CoxeterDiagrams.gug_coxiter_to_matrix(s)
+            if ret === nothing
+                println("Failed reading $path")
+            else
+                (D, rank) = ret
+                if D === nothing || rank === nothing
+                    println("Error reading file probably")
+                else
+                    das = DiagramAndSubs(D,rank)
+                    euler = 0
+                    f_vector = CoxeterDiagrams.f_vector(das)
+                    for (ip,f_i) in enumerate(vcat([1],f_vector))
+                        i = ip-1
+                        euler += (-1)^i * f_i
+                    end
+                    @test euler == 0
+                end
+            end
+        end
+        end
+    end
+    end
+end
 
 
 @testset "Compactness/finite volume" begin
