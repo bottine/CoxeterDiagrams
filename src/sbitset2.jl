@@ -9,10 +9,7 @@ struct SBitSet{N}
 end
 
 
-@inline function SBitSet(m::MBitSet{N}) where N
-    SBitSet{N}(m.pieces)
-end
-@inline function MBitSet(s::SBitSet{N}) where N
+@inline function SBitSet(s::SBitSet{N}) where N
     SBitSet{N}(s.pieces)
 end
 
