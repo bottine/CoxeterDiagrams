@@ -94,22 +94,39 @@ end
 end
 
 @inline function Base.iterate(s::SBitSet{N}) where N
-    Base.iterate(s,(UInt64(1),UInt64(1),UInt64(1)))
+    Base.iterate(s,(UInt64(1),UInt64(1),UInt64(1),s.pieces[1]))
 end
 
-@inline function Base.iterate(s::SBitSet{N},(d,rbs,r)) where N
+@inline function Base.iterate(s::SBitSet{N},(d,r,current,current_block)) where N
     d>N && return nothing
+    #@assert (d-1)*64 + r == current
     while d ≤ N
-        while rbs ≠ UInt64(0)
-            if (rbs & s.pieces[d])≠0
-                return (64*(d-1) + r, (d,rbs << 1, r + 1))
+        while current_block ≠ UInt64(0)
+
+            #= semi random to speed up going over holes =#
+            while current_block & UInt64(0xFFFF) == 0
+                current_block >>= 16
+                r += 16
+                current += 16
+            end 
+            while current_block & UInt64(0xF) == 0
+                current_block >>= 4
+                r += 4
+                current += 4
             end
-            rbs <<= 1
-            r += 1
+            
+            if current_block & UInt64(1) == UInt64(1)
+                return (current, (d,r+1,current+1,current_block>>1))
+            end
+            current+=1
+            r+=1
+            current_block >>= 1
         end
         d += 1
-        rbs = UInt64(1)
-        r = UInt64(1)
+        r = 1
+        current = 64*(d-1)+1
+        d > N && return nothing
+        current_block = s.pieces[d]
     end
     
     return nothing 

@@ -8,6 +8,9 @@ CD = CoxeterDiagrams
 CISD = CD.ConnectedInducedSubDiagram
 SBS = CD.SBitSet{4}
 
+
+include("unit/sbitset2.jl")
+
 @testset "Degree Sequences" begin
     
 end
