@@ -21,7 +21,7 @@ module CoxeterDiagrams
     import Base.show 
 
 
-    include("sbitset.jl")
+    include("sbitset2.jl")
     include("diagram_type.jl")
     include("degree_sequence.jl")
     include("isom.jl")
