@@ -17,7 +17,7 @@ module CoxeterDiagrams
     using StaticArrays
     using Memoize
     using Debugger
-    using ResumableFunctions
+    using IterTools
     import Base.show 
 
 
@@ -502,60 +502,35 @@ module CoxeterDiagrams
         end
         return das
     end
-
-
-    struct AllSphericalOfRank
-        n::Int
-        das::DiagramAndSubs
-    end
     
-    function Base.iterate(a::AllSphericalOfRank,state=Stack{Tuple{SBitSet{4},SBitSet{4},Int,Int,Int},20}((SBitSet{4}(),SBitSet{4}(),0,1,1))) # Because we assume das.d ≤ 20 always!
-       
-        das = a.das
-        n = a.n
-        stack = state
-
-        @label kisskissbangbang
-        while !isempty(stack)
-            
-            (current_vertices,current_boundary,current_rank,start_rank,start_idx) = pop!(stack)
-            
-            if current_rank == n
-                return (current_vertices,stack)
-            else
-
-                @inbounds for piece_rank in start_rank:n-current_rank
-                    @inbounds for piece_idx in start_idx:length(das.connected_spherical[piece_rank])
-                        piece = das.connected_spherical[piece_rank][piece_idx]
-                        #@assert piece_rank == length(piece.vertices)
-                        if  current_rank + piece_rank ≤ n &&
-                            isempty(piece.vertices ∩ current_vertices) && 
-                            isempty(piece.boundary ∩ current_vertices) 
-                            
-                            new_vertices = piece.vertices ∪ current_vertices
-                            new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
-                            new_card = current_rank + piece_rank
-
-                            (new_start_rank,new_start_idx) = piece_idx == length(das.connected_spherical[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
-                            push!(stack, (current_vertices,current_boundary,current_rank,new_start_rank,new_start_idx))
-                            push!(stack, (new_vertices,new_boundary,new_card,new_start_rank,new_start_idx))
-                            @goto kisskissbangbang
-                        end
-                    end
-                    start_idx=1
-                end 
-        
-            end
+    function boundary(das::DiagramAndSubs,vertices::SBitSet{4})
+        boundary = SBitSet{4}() 
+        neighbors(w) = SBitSet{4}([i for i in 1:size(das.D)[1] if i≠w && das.D[w,i]== 3])
+        for w in vertices
+            boundary = boundary ∪ neighbors(w)
         end
-
-
+        boundary = boundary ~ vertices
+        return boundary
     end
 
-    Base.IteratorEltype(::Type{AllSphericalOfRank}) = Base.HasEltype() 
-    Base.eltype(::Type{AllSphericalOfRank}) = SBitSet{4}
-    Base.IteratorSize(::Type{AllSphericalOfRank}) = Base.SizeUnknown()
 
-    all_spherical_of_rank(das::DiagramAndSubs,n::Int) = AllSphericalOfRank(n,das)
+
+
+
+
+
+
+
+
+
+
+
+
+    include("spherical_subdiagram_enumeration.jl")
+
+
+
+
 
     function all_affine_of_rank(das::DiagramAndSubs,n::Int)
         
@@ -752,7 +727,7 @@ module CoxeterDiagrams
 
     function is_compact(das::DiagramAndSubs)
         
-        sph_dm = AllSphericalOfRank(das.d-1,das)
+        sph_dm = AllSphericalOfRank(das,das.d-1)
         is_empty_sph_dm = true
         for vert in sph_dm
             is_empty_sph_dm = false
@@ -787,7 +762,7 @@ module CoxeterDiagrams
         empty_sph_dm = true
         #sph_dm = all_spherical_of_rank(das,das.d-1)
         #for vert in sph_dm 
-        for vert in  AllSphericalOfRank(das.d-1,das)
+        for vert in  AllSphericalOfRank(das,das.d-1)
             empty_sph_dm = false
             sph_exts = length(all_spherical_direct_extensions(das,vert))
             aff_exts = length(all_affine_direct_extensions(das,vert))
@@ -810,7 +785,7 @@ module CoxeterDiagrams
         fin_vol = true
 
         is_empty_sph_dm = true
-        sph_dm = AllSphericalOfRank(das.d-1,das)
+        sph_dm = AllSphericalOfRank(das,das.d-1)
         for vert in sph_dm
             is_empty_sph_dm = false
             sph_exts = length(all_spherical_direct_extensions(das,vert))
@@ -835,10 +810,10 @@ module CoxeterDiagrams
         # * using this function and adding to the coordinate corresponding to the rank of each diagram we get
         f_vector = Int64[]
         for i in 1:das.d-1 
-            push!(f_vector,length(collect(AllSphericalOfRank(i,das))))
+            push!(f_vector,length(collect(AllSphericalOfRank(das,i))))
         end
         
-        push!(f_vector,length(collect(AllSphericalOfRank(das.d,das))))
+        push!(f_vector,length(collect(AllSphericalOfRank(das,das.d))))
         f_vector[end] += length(CoxeterDiagrams.all_affine_of_rank(das,das.d-1))
         reverse!(f_vector)
         push!(f_vector,1)
