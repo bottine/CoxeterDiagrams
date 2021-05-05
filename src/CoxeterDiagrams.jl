@@ -503,50 +503,72 @@ module CoxeterDiagrams
     end
 
 
-    function all_spherical_of_rank(das::DiagramAndSubs,n::Int)
-        
-        @assert n ≤ das.d
-        diagrams_go_here = SBitSet{4}[]#Tuple{SBitSet{4},SBitSet{4}}[]
-        _all_spherical_of_rank__all_extensions(das,n,SBitSet{4}(),SBitSet{4}(),0,diagrams_go_here)
-        return diagrams_go_here
-
+    mutable struct Stack{T,N}
+        stack::MVector{N,T}
+        idx::Int
     end
-    function _all_spherical_of_rank__all_extensions(
-        das::DiagramAndSubs,
-        n::Int,
-        current_vertices::SBitSet{4},
-        current_boundary::SBitSet{4},
-        current_rank::Int,
-        diagrams_go_here::Vector{SBitSet{4}};
-        start_rank=1,
-        start_idx=1
-    )
-        #@assert current_rank == length(current_vertices)
+
+    Stack{T,N}() where {T,N} = Stack{T,N}(MVector{N,T}(undef),0)
+    function Base.push!(s::Stack{T,N},t::T) where {T,N}
+        @assert s.idx < N
+        s.idx += 1
+        s.stack[s.idx] = t
+        return s
+    end
+
+    function Base.pop!(s::Stack{T,N}) where {T,N}
+        @assert s.idx > 0
+        s.idx -= 1
+        return s.stack[s.idx+1]
+    end
+
+    function Base.isempty(s::Stack{T,N}) where {T,N}
+        s.idx == 0
+    end
+
+    #@resumable function all_spherical_of_rank(das::DiagramAndSubs,n::Int)
+    function all_spherical_of_rank(das::DiagramAndSubs,n::Int)
+       
+        diagrams_go_here = SBitSet{4}[]
+
+        @assert n ≤ das.d
+        stack = Stack{Tuple{SBitSet{4},SBitSet{4},Int,Int,Int},20}() # Because we assume das.d ≤ 20 always! 
+        push!(stack,(SBitSet{4}(),SBitSet{4}(),0,1,1))
         
-        if current_rank == n
-            push!(diagrams_go_here,current_vertices)
-            return
-        else
+        @label kisskissbangbang
+        while !isempty(stack)
+            
+            current_vertices,current_boundary,current_rank,start_rank,start_idx = pop!(stack)
+            
+            if current_rank == n
+                push!(diagrams_go_here,current_vertices)
+                #@yield current_vertices
+            else
 
-            @inbounds for piece_rank in start_rank:n-current_rank
-                @inbounds for piece_idx in start_idx:length(das.connected_spherical[piece_rank])
-                    piece = das.connected_spherical[piece_rank][piece_idx]
-                    #@assert piece_rank == length(piece.vertices)
-                    if  current_rank + piece_rank ≤ n &&
-                        isempty(piece.vertices ∩ current_vertices) && 
-                        isempty(piece.boundary ∩ current_vertices) 
-                        
-                        new_vertices = piece.vertices ∪ current_vertices
-                        new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
-                        new_card = current_rank + piece_rank
+                @inbounds for piece_rank in start_rank:n-current_rank
+                    @inbounds for piece_idx in start_idx:length(das.connected_spherical[piece_rank])
+                        piece = das.connected_spherical[piece_rank][piece_idx]
+                        #@assert piece_rank == length(piece.vertices)
+                        if  current_rank + piece_rank ≤ n &&
+                            isempty(piece.vertices ∩ current_vertices) && 
+                            isempty(piece.boundary ∩ current_vertices) 
+                            
+                            new_vertices = piece.vertices ∪ current_vertices
+                            new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+                            new_card = current_rank + piece_rank
 
-                        (new_start_rank,new_start_idx) = piece_idx == length(das.connected_spherical[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
-                        _all_spherical_of_rank__all_extensions(das,n,new_vertices,new_boundary,new_card, diagrams_go_here,start_rank=new_start_rank,start_idx=new_start_idx)
+                            (new_start_rank,new_start_idx) = piece_idx == length(das.connected_spherical[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
+                            push!(stack, (current_vertices,current_boundary,current_rank,new_start_rank,new_start_idx))
+                            push!(stack, (new_vertices,new_boundary,new_card,new_start_rank,new_start_idx))
+                            @goto kisskissbangbang
+                        end
                     end
-                end
-                start_idx=1
-            end 
+                    start_idx=1
+                end 
+        
+            end
         end
+        return diagrams_go_here
 
     end
 
@@ -801,8 +823,10 @@ module CoxeterDiagrams
         compact = true
         fin_vol = true
 
+        is_empty_sph_dm = true
         sph_dm = all_spherical_of_rank(das,das.d-1)
         for vert in sph_dm
+            is_empty_sph_dm = false
             sph_exts = length(all_spherical_direct_extensions(das,vert))
             compact && (compact = (sph_exts == 2))
             if fin_vol 
@@ -813,7 +837,7 @@ module CoxeterDiagrams
         end
        
         # more or less degenerate in this case I think
-        if isempty(sph_dm)
+        if is_empty_sph_dm
             return (false,false)
         end
         return (compact,fin_vol)
@@ -825,10 +849,10 @@ module CoxeterDiagrams
         # * using this function and adding to the coordinate corresponding to the rank of each diagram we get
         f_vector = Int64[]
         for i in 1:das.d-1 
-            push!(f_vector,length(CoxeterDiagrams.all_spherical_of_rank(das,i)))
+            push!(f_vector,length(collect(CoxeterDiagrams.all_spherical_of_rank(das,i))))
         end
         
-        push!(f_vector,length(CoxeterDiagrams.all_spherical_of_rank(das,das.d)))
+        push!(f_vector,length(collect(CoxeterDiagrams.all_spherical_of_rank(das,das.d))))
         f_vector[end] += length(CoxeterDiagrams.all_affine_of_rank(das,das.d-1))
         reverse!(f_vector)
         push!(f_vector,1)
