@@ -4,9 +4,16 @@
 * Function to compute all spherical subdiagrams and all affine subdiagrams
 * Function to compute the f-vector
 
-* Make `all_spherical_of_rank` into an iterator using `@resumable` (same for `all_affine_of_rank` and `all_spherical_direct_extensions` and `all_affine_direct_extensions`) so that:
-    * Iterating allocates less
-    * Can short-circuit the iteration as soon as needed
+* For the following procedures:
+    * compute all affines of rank from n to m
+    * compute the f-vector
+    * compute all direct spherical extensions
+    * compute all direct affine extensions
+    * check that all affine extend to at least one of rank d-1
+  Follow the same pattern as the enumeration of spherical: that is, make it into a proper iterator.
+  Then, this allows short-circuiting finite_volume and cocompactness tests  
+  It also allows computing the f-vector by simply iterating over all spherical (no matter the rank) and incrementing the f-vector's coordinates as necessary (+ computing the affines)
+  
 * More unit testing:
     * Test all functions on the one specific example already present
 * Write `is_degenerate()` to check if the diagram is degenerate in the given rank
