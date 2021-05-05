@@ -115,7 +115,7 @@ end
     #@test length(CoxeterDiagrams.all_affine_of_rank(das,4)) == 1
     #@test length(CoxeterDiagrams.all_affine_of_rank(das,5)) == 0
    
-    @test [length(CoxeterDiagrams.all_spherical_of_rank(das,i)) for i in 1:6] == [7, 21, 31, 21, 3, 0] 
+    @test [length(collect(CoxeterDiagrams.all_spherical_of_rank(das,i))) for i in 1:6] == [7, 21, 31, 21, 3, 0] 
 
 end
 
@@ -136,9 +136,9 @@ end
 
         
         @testset "Computing direct extensions is the same as filtering over the candidate extensions" for i in 1:rank-1 
-            all_sph_i = CoxeterDiagrams.all_spherical_of_rank(das,i)
-            all_sph_ip = CoxeterDiagrams.all_spherical_of_rank(das,i+1)
-            all_aff_i = CoxeterDiagrams.all_affine_of_rank(das,i)
+            all_sph_i = CoxeterDiagrams.all_spherical_of_rank(das,i) |> collect
+            all_sph_ip = CoxeterDiagrams.all_spherical_of_rank(das,i+1) |> collect
+            all_aff_i = CoxeterDiagrams.all_affine_of_rank(das,i) |> collect
             for sph in all_sph_i
                 ext_sph_1 = CoxeterDiagrams.all_spherical_direct_extensions(das,sph)
                 ext_sph_2 = [sph2 for sph2 in all_sph_ip if sph ⊆ sph2]
@@ -236,13 +236,13 @@ end
                         @test  sum(das.connected_affine .|> length) == row.num_irred_aff
                     end
                     if !ismissing(row.num_sph_rank_dm) 
-                        @test  CoxeterDiagrams.all_spherical_of_rank(das,das.d-1) |> length  == row.num_sph_rank_dm
+                        @test  CoxeterDiagrams.all_spherical_of_rank(das,das.d-1) |> collect |> length  == row.num_sph_rank_dm
                     end
                     if !ismissing(row.num_sph_rank_d) 
-                        @test  CoxeterDiagrams.all_spherical_of_rank(das,das.d) |> length == row.num_sph_rank_d
-                    end
+                        @test  CoxeterDiagrams.all_spherical_of_rank(das,das.d)  |> collect |> length == row.num_sph_rank_d
+                    end 
                     if !ismissing(row.num_aff_rank_dm) 
-                        @test  CoxeterDiagrams.all_affine_of_rank(das,das.d-1) |> length == row.num_aff_rank_dm
+                        @test  CoxeterDiagrams.all_affine_of_rank(das,das.d-1)  |> collect |> length == row.num_aff_rank_dm
                     end
                     #@test CoxeterDiagrams.is_compact_respectively_finite_volume(das) == (is_compact(das),is_finite_volume(das))
                     #println("> ", length(all_spherical_of_rank(das,das.d-1)), ", ", length(all_spherical_of_rank(das,das.d)), ", ", length(all_affine_of_rank(das,das.d-1)))
