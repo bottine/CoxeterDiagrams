@@ -551,7 +551,7 @@ module CoxeterDiagrams
 
     end
 
-    Base.IteratorEltype(::Type{AllSphericalOfRank}) = HasEltype() 
+    Base.IteratorEltype(::Type{AllSphericalOfRank}) = Base.HasEltype() 
     Base.eltype(::Type{AllSphericalOfRank}) = SBitSet{4}
     Base.IteratorSize(::Type{AllSphericalOfRank}) = Base.SizeUnknown()
 
