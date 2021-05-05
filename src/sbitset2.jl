@@ -29,12 +29,12 @@ end
 @inline function Base.:(&)(s1::SBitSet{N},s2::SBitSet{N}) where N
     SBitSet{N}((&).(s1.pieces,s2.pieces))
 end
-Base.:(∩)(s1::SBitSet{N},s2::SBitSet{N}) where N = Base.:(&)(s1,s2)
+Base.:(∩)(s1::SBitSet{N},s2::SBitSet{N}) where N = s1 & s2
 
 @inline function Base.:(|)(s1::SBitSet{N},s2::SBitSet{N}) where N
     SBitSet{N}((|).(s1.pieces,s2.pieces))
 end
-Base.:(∪)(s1::SBitSet{N},s2::SBitSet{N}) where N = Base.:(|)(s1,s2)
+Base.:(∪)(s1::SBitSet{N},s2::SBitSet{N}) where N = s1 | s2
 
 @inline function Base.:(~)(s1::SBitSet{N}) where N
     SBitSet{N}((~).(s1.pieces))
@@ -49,14 +49,25 @@ end
     SBitSet{N}(ntuple(x->UInt64(0),N))
 end
 
-@inline function SBitSet{N}(n::Integer) where N
-    @assert 1 ≤ n && n ≤ N*64
-    (d,r) = divrem(n,64)
+"""
+    _divrem64(n,N)
+
+For ``1≤n≤N*64``, return ``d,r`` with ``1≤r≤64`` and ``64*(d-1)+r=n``.
+
+"""
+@inline function _divrem64(n::Integer,N::Integer)
+   @assert 1 ≤ n ≤ N*64
+   (d,r) = divrem(n,64)
     if r == 0
         (d,r) = (d,64)
     else
         (d,r) = (d+1,r)
     end
+    return (d,r)
+end
+
+@inline function SBitSet{N}(n::Integer) where N
+    (d,r) = _divrem64(n,N)
     SBitSet{N}(ntuple(x-> x == d ? (UInt64(1) << (r-1)) : UInt64(0),N))
 end
 
@@ -69,29 +80,17 @@ end
 end
 
 @inline function push(s::SBitSet{N},n::Integer) where N
-    @assert 1 ≤ n && n ≤ N*64
-    (d,r) = divrem(n,64)
-    if r == 0
-        (d,r) = (d,64)
-    else
-        (d,r) = (d+1,r)
-    end
-    SBitSet{N}(ntuple(x-> x == d ? s.pieces[x] | (UInt64(1) << (r-1)) : s.pieces[x],N))
+    (d,r) = _divrem64(n,N)
+    SBitSet{N}(ntuple(x-> x == d ? (@inbounds s.pieces[x]) | (UInt64(1) << (r-1)) : (@inbounds s.pieces[x]),N))
 end
 
 @inline function pop(s::SBitSet{N},n::Integer) where N
-    @assert 1 ≤ n && n ≤ N*64
-    (d,r) = divrem(n,64)
-    if r == 0
-        (d,r) = (d,64)
-    else
-        (d,r) = (d+1,r)
-    end
-    SBitSet{N}(ntuple(x-> x == d ? s.pieces[x] & ~(UInt64(1) << (r-1)) : s.pieces[x],N))
+    (d,r) = _divrem64(n,N)
+    SBitSet{N}(ntuple(x-> x == d ? (@inbounds s.pieces[x]) & ~(UInt64(1) << (r-1)) : (@inbounds s.pieces[x]),N))
 end
 
 @inline function Base.iterate(s::SBitSet{N}) where N
-    Base.iterate(s,(UInt64(1),UInt64(1),UInt64(1),s.pieces[1]))
+    Base.iterate(s,(UInt64(1),UInt64(1),UInt64(1), @inbounds s.pieces[1]))
 end
 
 @inline function Base.iterate(s::SBitSet{N},(d,r,current,current_block)) where N
@@ -123,7 +122,7 @@ end
         r = 1
         current = 64*(d-1)+1
         d > N && return nothing
-        current_block = s.pieces[d]
+        @inbounds current_block = s.pieces[d]
     end
     
     return nothing 

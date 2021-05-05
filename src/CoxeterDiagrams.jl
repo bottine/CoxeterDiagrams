@@ -595,7 +595,97 @@ module CoxeterDiagrams
     end
 
 
+    function all_affine_of_ranks(das::DiagramAndSubs,min::Int,max::Int)
+        
+        diagrams_go_here = Tuple{SBitSet{4},Int}[]
+        _all_affine_of_ranks__all_extensions(das,min,max,SBitSet{4}(),SBitSet{4}(),0,diagrams_go_here)
+        return diagrams_go_here
 
+    end
+    function _all_affine_of_ranks__all_extensions(
+        das::DiagramAndSubs,
+        min::Int,
+        max::Int,
+        current_vertices::SBitSet{4},
+        current_boundary::SBitSet{4},
+        current_rank,
+        diagrams_go_here::Vector{SBitSet{4}};
+        start_rank=1,
+        start_idx=1
+    )
+        
+        if min ≤ current_rank ≤ max
+            push!(diagrams_go_here,(current_vertices,current_rank))
+        end
+        
+        current_rank == max && return
+
+        
+        @inbounds for piece_rank in start_rank:max-current_rank
+            @inbounds for piece_idx in start_idx:length(das.connected_affine[piece_rank])
+                piece = das.connected_affine[piece_rank][piece_idx]
+                if  current_rank + piece_rank ≤ max &&
+                    isempty(piece.vertices∩current_vertices) && 
+                    isempty(piece.boundary∩current_vertices) 
+                    
+                    new_vertices = piece.vertices ∪ current_vertices
+                    new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+                    new_rank = current_rank + piece_rank 
+
+                    (new_start_rank,new_start_idx) = piece_idx == length(das.connected_affine[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
+                    _all_affine_of_ranks__all_extensions(das,min,max,new_vertices,new_boundary,new_rank ,diagrams_go_here,start_rank=new_start_rank,start_idx=new_start_idx)
+                end
+            end  
+            start_idx=1
+        end
+    end
+
+    # Check that all affine subdiagram extend to (at least) a subdiagram of rank das.d-1
+    function all_affine_extend_well(das::DiagramAndSubs)
+        
+        return _all_affine_extend_well__all_extensions(das,SBitSet{4}(),SBitSet{4}(),0)
+
+    end
+    function _all_affine_extend_well__all_extensions(
+        das::DiagramAndSubs,
+        current_vertices::SBitSet{4},
+        current_boundary::SBitSet{4},
+        current_rank;
+        start_rank=1,
+        start_idx=1
+    )
+        
+        if current_rank == das.d-1
+            return true
+        end
+        
+
+        has_ext = false 
+        @inbounds for piece_rank in start_rank:das.d-1-current_rank
+            @inbounds for piece_idx in start_idx:length(das.connected_affine[piece_rank])
+                piece = das.connected_affine[piece_rank][piece_idx]
+                if  current_rank + piece_rank ≤ das.d-1 &&
+                    isempty(piece.vertices∩current_vertices) && 
+                    isempty(piece.boundary∩current_vertices) 
+                    
+                    has_ext = true
+
+                    new_vertices = piece.vertices ∪ current_vertices
+                    new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+                    new_rank = current_rank + piece_rank 
+
+                    (new_start_rank,new_start_idx) = piece_idx == length(das.connected_affine[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
+                    if ! _all_affine_extend_well__all_extensions(das,new_vertices,new_boundary,new_rank,start_rank=new_start_rank,start_idx=new_start_idx)
+                        return false
+                    end
+                end
+            end  
+            start_idx=1
+        end
+
+        return has_ext
+    end
+     
     
     function all_spherical_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
         
@@ -651,7 +741,8 @@ module CoxeterDiagrams
             start_idx = 1
         end               
     end
-   
+ 
+     
 
     function is_compact(das::DiagramAndSubs)
         
@@ -678,7 +769,12 @@ module CoxeterDiagrams
     
     end
 
-    function is_finite_volume(das::DiagramAndSubs)
+    function is_finite_volume(das::DiagramAndSubs; precheck=true)
+
+        # As in Guglielmetti Prop 6.3.1 p. 118 (PhD thesis)
+        if precheck && !all_affine_extend_well(das)
+            return false
+        end
         
         empty_sph_dm = true
         #sph_dm = all_spherical_of_rank(das,das.d-1)
