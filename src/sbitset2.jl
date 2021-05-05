@@ -90,7 +90,7 @@ end
 end
 
 @inline function Base.iterate(s::SBitSet{N}) where N
-    Base.iterate(s,(UInt64(1),UInt64(1),UInt64(1), @inbounds s.pieces[1]))
+    Base.iterate(s,(1,1,1, @inbounds s.pieces[1]))
 end
 
 @inline function Base.iterate(s::SBitSet{N},(d,r,current,current_block)) where N
