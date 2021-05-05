@@ -94,29 +94,10 @@ end
 end
 
 @inline function Base.iterate(s::SBitSet{N},(d,r,current,current_block)) where N
-    d>N && return nothing
-    #@assert (d-1)*64 + r == current
     while d ≤ N
-        while current_block ≠ UInt64(0)
-
-            #= semi random to speed up going over holes =#
-            while current_block & UInt64(0xFFFF) == 0
-                current_block >>= 16
-                r += 16
-                current += 16
-            end 
-            while current_block & UInt64(0xF) == 0
-                current_block >>= 4
-                r += 4
-                current += 4
-            end
-            
-            if current_block & UInt64(1) == UInt64(1)
-                return (current, (d,r+1,current+1,current_block>>1))
-            end
-            current+=1
-            r+=1
-            current_block >>= 1
+        if current_block ≠ UInt64(0)
+            tz = trailing_zeros(current_block)
+            return (current+tz, (d,r+tz+1,current+tz+1,current_block>>(tz+1)))
         end
         d += 1
         r = 1
