@@ -119,7 +119,7 @@ end
 
 
 @testset "More random matrices" begin
-    for rank in 2:13, size in 5:20, round in 1:10
+    for rank in 2:13, size in rank+1:20, round in 1:10
         M = rand([0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,3,3,4,5,6,7,8],size,size); M = tril(M); M = M + M'
         das = DiagramAndSubs(M,rank)
         compact,fin_vol = is_compact_respectively_finite_volume(das)
@@ -127,6 +127,15 @@ end
         @testset "is_compact_respectively_finite_volume agrees with is_compact and is_finite_volume" begin
             @test compact == is_compact(das)
             @test fin_vol == is_finite_volume(das)
+
+            if !(fin_vol == is_finite_volume(das))
+                println(M)
+                println(rank)
+                println(fin_vol)
+                println(is_finite_volume(das))
+                @assert false
+            end
+
         end
 
         

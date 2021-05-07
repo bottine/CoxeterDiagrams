@@ -43,7 +43,7 @@ function is_finite_volume(das::DiagramAndSubs; precheck=false)
     for vert in  AllSphericalOfRank(das,das.d-1)
         empty_sph_dm = false
         sph_exts = number_spherical_direct_extensions_but_at_most_n(das,vert,3)
-        aff_exts = number_spherical_direct_extensions_but_at_most_n(das,vert,3-sph_exts)
+        aff_exts = number_affine_direct_extensions_but_at_most_n(das,vert,3-sph_exts)
         if !(sph_exts + aff_exts == 2)
             return false
         end
