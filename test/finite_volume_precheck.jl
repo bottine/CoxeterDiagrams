@@ -25,8 +25,14 @@
                     das = DiagramAndSubs(rank)
                     for i in 1:size(D)[1]
                         extend!(das,D[i,1:i-1])
-                        println("$i") 
-                        @test CoxeterDiagrams.all_affine_extend_well(das) ≥ is_finite_volume(das,precheck=false) ≥ is_compact(das) 
+                        println("$i")
+                        precheck = CoxeterDiagrams.all_affine_extend_well(das)
+                        finvol = is_finite_volume(das,precheck=false)
+                        compact = is_compact(das)
+
+                        #@test precheck3 == precheck2 
+                        @test precheck ≥ finvol
+                        @test finvol ≥ compact 
                     end
 
                     println()
