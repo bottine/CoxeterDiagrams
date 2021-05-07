@@ -107,24 +107,16 @@ Base.IteratorEltype(::Type{AllSphericalDirectExtensions}) = Base.HasEltype()
 Base.eltype(::Type{AllSphericalDirectExtensions}) = SBitSet{4}
 Base.IteratorSize(::Type{AllSphericalDirectExtensions}) = Base.SizeUnknown()
 
-function all_spherical_direct_extensions2(das::DiagramAndSubs,vertices::SBitSet{4})
+function all_spherical_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
     return AllSphericalDirectExtensions(das,vertices)
 end
 
-function 
 
-
-function all_spherical_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
-    
-    extensions = SBitSet{4}[]
-    for piece in Iterators.flatten(das.connected_spherical)
-        if length(piece.vertices ∩ ~vertices) == 1 && isempty(piece.boundary ∩ vertices)
-            push!(extensions, piece.vertices ∪ vertices) 
-        end
+function number_spherical_direct_extensions_but_at_most_n(das::DiagramAndSubs,vertices::SBitSet{4},n)
+    num_exts = 0
+    for ext in all_spherical_direct_extensions(das,vertices)
+        num_exts += 1
+        num_exts ≥ n && return num_exts
     end
-
-    @assert extensions == all_spherical_direct_extensions2(das,vertices) |> collect "$extensions vs $(all_spherical_direct_extensions2(das,vertices) |> collect) for $vertices in $(das.D)"
-
-    return extensions
+    return num_exts
 end
-

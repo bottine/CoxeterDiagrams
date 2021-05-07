@@ -73,6 +73,8 @@ Base.IteratorSize(::Type{AllAffineOfRank}) = Base.SizeUnknown()
 all_affine_of_rank(das::DiagramAndSubs,n::Int) = AllAffineOfRank(das,n) 
 all_affine_of_rank(das::DiagramAndSubs,min::Int,max::Int) = AllAffineOfRank(das,min,max,SBitSet{4}())
 
+
+
 function all_affine_extend_well(das)
    
     stack = Stack{Tuple{SBitSet{4},SBitSet{4},Int,Int,Int},20}((SBitSet{4}(),SBitSet{4}(),0,1,1)) # Because we assume das.d ≤ 20 always!
@@ -120,7 +122,73 @@ function all_affine_extend_well(das)
 
 end
 
+struct AllAffineDirectExtensions
+    das::DiagramAndSubs
+    base::SBitSet{4}
+end
 
+function Base.iterate(a::AllAffineDirectExtensions)
+    state = Stack{Tuple{SBitSet{4},SBitSet{4},SBitSet{4},Int,Int},20}((SBitSet{4}(),SBitSet{4}(),a.base,1,1)) # Because we assume das.d ≤ 20 always!
+    
+    return iterate(a,state)
+end
+
+function Base.iterate(a::AllAffineDirectExtensions,state)
+   
+    das = a.das
+    stack = state
+
+    @label killbillvol2
+    while !isempty(stack)
+    
+        (current_vertices,current_boundary,remaining_vertices,start_rank,start_idx) = pop!(stack)
+        if isempty(remaining_vertices) 
+            return (current_vertices,stack)
+        end
+
+        @inbounds for piece_rank in start_rank:length(das.connected_affine)
+            @inbounds for piece_idx in start_idx:length(das.connected_affine[piece_rank])
+                piece = das.connected_affine[piece_rank][piece_idx]
+                if  isempty(piece.vertices∩current_vertices) && 
+                    isempty(piece.boundary∩current_vertices) &&
+                    length(piece.vertices ∩ ~remaining_vertices) == 1 &&
+                    isempty(piece.boundary ∩ remaining_vertices)
+                    
+                    new_vertices = piece.vertices ∪ current_vertices
+                    new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
+                    new_remaining_vertices = remaining_vertices ∩ ~piece.vertices
+                    
+                    (new_start_rank,new_start_idx) = piece_idx == length(das.connected_affine[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
+                    push!(stack,(current_vertices,current_boundary,remaining_vertices,new_start_rank,new_start_idx))
+                    push!(stack,(new_vertices,new_boundary,new_remaining_vertices,new_start_rank,new_start_idx))
+                    @goto killbillvol2
+                end
+            end
+            start_idx = 1
+        end  
+    end
+end
+
+Base.IteratorEltype(::Type{AllAffineDirectExtensions}) = Base.HasEltype() 
+Base.eltype(::Type{AllAffineDirectExtensions}) = SBitSet{4}
+Base.IteratorSize(::Type{AllAffineDirectExtensions}) = Base.SizeUnknown()
+
+function all_affine_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
+    
+    return AllAffineDirectExtensions(das,vertices)
+
+end
+
+function number_affine_direct_extensions_but_at_most_n(das::DiagramAndSubs,vertices::SBitSet{4},n)
+    num_exts = 0
+    for ext in all_affine_direct_extensions(das,vertices)
+        num_exts += 1
+        num_exts ≥ n && return num_exts
+    end
+    return num_exts
+end
+
+#=
 
 function all_affine_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
     
@@ -164,4 +232,4 @@ function _all_affine_direct_extensions__all_extensions(
         start_idx = 1
     end               
 end
-
+=#
