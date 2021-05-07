@@ -108,12 +108,7 @@ end
     @test length(Set(vcat(das.connected_spherical...))) == length(vcat(das.connected_spherical...))
     @test length(spherical_should_be) == length(vcat(das.connected_spherical...))
    
-    @test [length(CD.all_affine_of_rank(das,i)) for i in 1:5] == [0, 4, 0, 1, 0]
-    #@test length(CoxeterDiagrams.all_affine_of_rank(das,1)) == 0
-    #@test length(CoxeterDiagrams.all_affine_of_rank(das,2)) == 4
-    #@test length(CoxeterDiagrams.all_affine_of_rank(das,3)) == 0
-    #@test length(CoxeterDiagrams.all_affine_of_rank(das,4)) == 1
-    #@test length(CoxeterDiagrams.all_affine_of_rank(das,5)) == 0
+    @test [length(CD.all_affine_of_rank(das,i) |> collect) for i in 1:5] == [0, 4, 0, 1, 0]
    
     @test [length(collect(CoxeterDiagrams.all_spherical_of_rank(das,i))) for i in 1:6] == [7, 21, 31, 21, 3, 0] 
 
@@ -143,7 +138,7 @@ end
                 ext_sph_1 = CoxeterDiagrams.all_spherical_direct_extensions(das,sph)
                 ext_sph_2 = [sph2 for sph2 in all_sph_ip if sph ⊆ sph2]
                 @test Set(ext_sph_1) == Set(ext_sph_2) 
-                ext_aff_1 = CoxeterDiagrams.all_affine_direct_extensions(das,sph)
+                ext_aff_1 = CoxeterDiagrams.all_affine_direct_extensions(das,sph) 
                 ext_aff_2 = [aff2 for aff2 in all_aff_i if sph ⊆ aff2]
                 @test Set(ext_aff_1) == Set(ext_aff_2) 
             end
