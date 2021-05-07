@@ -36,21 +36,24 @@ function Base.iterate(a::AllSphericalOfRank,state)
         @inbounds for piece_rank in start_rank:max-current_rank
             @inbounds for piece_idx in start_idx:length(das.connected_spherical[piece_rank])
                 piece = das.connected_spherical[piece_rank][piece_idx]
-                #@assert piece_rank == length(piece.vertices)
-                if  current_rank + piece_rank ≤ max &&
-                    isempty(piece.vertices ∩ current_vertices) && 
+                
+
+                @tassert piece_rank == length(piece.vertices)
+                @tassert current_rank + piece_rank ≤ max
+                
+                if  isempty(piece.vertices ∩ current_vertices) && 
                     isempty(piece.boundary ∩ current_vertices) 
                     
                     new_vertices = piece.vertices ∪ current_vertices
                     new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
-                    new_card = current_rank + piece_rank
+                    new_rank = current_rank + piece_rank
 
                     (new_start_rank,new_start_idx) = piece_idx == length(das.connected_spherical[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
 
                     push!(stack, (current_vertices,current_boundary,current_rank,new_start_rank,new_start_idx))
-                    new_card ≠ max && push!(stack, (new_vertices,new_boundary,new_card,new_start_rank,new_start_idx))
-                    if min ≤ new_card
-                        return ((new_vertices,new_card),stack)
+                    new_rank ≠ max && push!(stack, (new_vertices,new_boundary,new_rank,new_start_rank,new_start_idx))
+                    if min ≤ new_rank
+                        return ((new_vertices,new_rank),stack)
                     else
                         @goto killbillvol2
                     end
