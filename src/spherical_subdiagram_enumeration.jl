@@ -71,3 +71,15 @@ Base.IteratorSize(::Type{AllSphericalOfRank}) = Base.SizeUnknown()
 all_spherical_of_rank(das::DiagramAndSubs,n::Int) = AllSphericalOfRank(das,n) 
 all_spherical_of_rank(das::DiagramAndSubs,min::Int,max::Int) = AllSphericalOfRank(das,min,max,SBitSet{4}())
 
+
+function all_spherical_direct_extensions(das::DiagramAndSubs,vertices::SBitSet{4})
+    
+    extensions = SBitSet{4}[]
+    for piece in Iterators.flatten(das.connected_spherical)
+        if length(piece.vertices ∩ ~vertices) == 1 && isempty(piece.boundary ∩ vertices)
+            push!(extensions, piece.vertices ∪ vertices) 
+        end
+    end
+    return extensions
+end
+
