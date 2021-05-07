@@ -14,6 +14,10 @@ function AllAffineOfRank(das,n)
     return IterTools.imap(x->x[1],AllAffineOfRank(das,n,n,SBitSet{4}()))
 end
 
+function AllAffineOfRank(das,min,max)
+    return AllAffineOfRank(das,min,max,SBitSet{4}())
+end
+
 function Base.iterate(a::AllAffineOfRank)
     state = Stack{Tuple{SBitSet{4},SBitSet{4},Int,Int,Int},20}((a.base,boundary(a.das,a.base),length(a.base),1,1)) # Because we assume das.d ≤ 20 always!
     # TODO: If base is a valid diagram, also emit it
@@ -76,6 +80,25 @@ all_affine_of_rank(das::DiagramAndSubs,min::Int,max::Int) = AllAffineOfRank(das,
 
 
 function all_affine_extend_well(das)
+    affine = SBitSet{4}[]
+    affine_rank_dm = SBitSet{4}[]
+
+    for (diag,rank) in AllAffineOfRank(das,1,das.d-1)
+        push!(affine,diag)
+        rank == das.d-1 && push!(affine_rank_dm,diag)
+    end
+    
+    for diag in affine
+        if !any(diag ⊆ diag_dm for diag_dm in affine_rank_dm)
+            return false
+        end
+    end
+    return true
+    
+end
+
+
+function all_affine_extend_well2(das)
    
     stack = Stack{Tuple{SBitSet{4},SBitSet{4},Int,Int,Int},20}((SBitSet{4}(),SBitSet{4}(),0,1,1)) # Because we assume das.d ≤ 20 always!
     
@@ -90,6 +113,7 @@ function all_affine_extend_well(das)
             @inbounds for piece_idx in start_idx:length(das.connected_affine[piece_rank])
                 piece = das.connected_affine[piece_rank][piece_idx]
                 
+
                 @tassert piece_rank == length(piece.vertices) - 1
                 
                 if  isempty(piece.vertices ∩ current_vertices) && 
@@ -104,11 +128,12 @@ function all_affine_extend_well(das)
 
                     (new_start_rank,new_start_idx) = piece_idx == length(das.connected_affine[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
 
-                    if new_rank ≠ das.d-1
+                    if new_rank == das.d-1
+                    else
                         push!(stack, (current_vertices,current_boundary,current_rank,new_start_rank,new_start_idx))
                         push!(stack, (new_vertices,new_boundary,new_rank,new_start_rank,new_start_idx))
-                        @goto killbillvol2
                     end
+                    @goto killbillvol2
                 end
             end
             start_idx=1
@@ -121,6 +146,10 @@ function all_affine_extend_well(das)
     return true
 
 end
+
+
+
+
 
 struct AllAffineDirectExtensions
     das::DiagramAndSubs

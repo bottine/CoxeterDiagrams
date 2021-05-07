@@ -211,6 +211,7 @@ end
     end
 end
 
+include("finite_volume_precheck.jl")
 
 @testset "Right number of irreducible spherical/affine subdiagrams" begin
     @testset "Known compactness/finite volume values" for row in CSV.Rows("../graphs/known_values.csv";

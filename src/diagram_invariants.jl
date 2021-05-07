@@ -30,7 +30,7 @@ function is_compact(das::DiagramAndSubs)
 
 end
 
-function is_finite_volume(das::DiagramAndSubs; precheck=false)
+function is_finite_volume(das::DiagramAndSubs; precheck=true)
 
     # As in Guglielmetti Prop 6.3.1 p. 118 (PhD thesis)
     if precheck && !all_affine_extend_well(das)
