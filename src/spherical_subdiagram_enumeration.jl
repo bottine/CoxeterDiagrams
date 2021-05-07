@@ -13,6 +13,9 @@ end
 function AllSphericalOfRank(das,n)
     return IterTools.imap(x->x[1],AllSphericalOfRank(das,n,n,SBitSet{4}()))
 end
+function AllSphericalOfRank(das,min,max)
+    return AllSphericalOfRank(das,min,max,SBitSet{4}())
+end
 
 function Base.iterate(a::AllSphericalOfRank)
     state = Stack{Tuple{SBitSet{4},SBitSet{4},Int,Int,Int},20}((a.base,boundary(a.das,a.base),length(a.base),1,1)) # Because we assume das.d ≤ 20 always!
