@@ -267,6 +267,136 @@ function extend!(das::DiagramAndSubs, v::Array{Int,1})
     end
    
 end
+
+
+function combine(
+    das,
+    v::Int,
+    singleton_v,
+    current::CISD,
+    current_card::Int,
+    current_num_pieces::Int,
+    piece::CISD,
+    card::Int,
+    deg_seq_v,
+)
+    
+    if isempty(piece.vertices∩current.vertices) &&  piece.boundary∩current.vertices == singleton_v
+         
+        
+        new_vertices = piece.vertices ∪ current.vertices
+        new_boundary = ((piece.boundary ∩ ~current.vertices) ∪ (current.boundary ∩ ~piece.vertices))
+
+        new_edges = piece.vertices ∩ current.boundary # all neighbors of v in the new piece we're considering
+        new_edges_col = collect(new_edges)
+        num_new_edges = length(new_edges)
+        new_card = current_card+card
+        new_num_pieces = current_num_pieces + 1
+        
+
+        if num_new_edges > 2
+            return nothing
+        elseif num_new_edges == 2 # special case: the only legal way here is if we're closing a diagram of type DT_a to one of type DT_A
+            piece.type == DT_a || return nothing
+            current_card == 1 || return nothing
+            (das.D[v,new_edges_col[1]] == 3 && das.D[v,new_edges_col[2]] == 3) || return nothing
+            new_edges == piece.degree_1_vertices || return nothing
+            
+            # special case, so we push and are done
+            return CISD(new_vertices,new_boundary,DT_A),2
+        else
+            
+            new_edges_col = collect(new_edges)
+
+
+            # only one new edge.
+            u = new_edges_col[1]
+            singleton_u = SBitSet{4}(u)
+
+            old_deg_seq_u = 0
+            for w in piece.vertices
+                if w ≠ u && das.D[u,w] ≠ 2
+                    old_deg_seq_u = push_label(old_deg_seq_u,das.D[u,w]) 
+                end
+            end
+
+            l = das.D[v,u]
+
+            #println("only one new edge")
+            #println("it's $u with label $l")
+            
+            new_deg_seq_v = push_label(deg_seq_v,l) 
+            new_deg_seq_u = push_label(old_deg_seq_u,l)
+            
+            isnothing(new_deg_seq_v) && return nothing
+            isnothing(new_deg_seq_u) && return nothing
+
+            new_gen_deg_seq = current.degree_sequence + piece.degree_sequence
+            update!(new_gen_deg_seq,deg_seq_v,new_deg_seq_v)
+            update!(new_gen_deg_seq,old_deg_seq_u,new_deg_seq_u)
+           
+            new_degree_1 = SBitSet{4}()
+            new_degree_3 = SBitSet{4}()
+            new_degree_1_n = SBitSet{4}()
+            new_degree_3_n = SBitSet{4}()
+            new_need_to_know_specific_vertices = true
+
+            neighbors(w) = SBitSet{4}([i for i in new_vertices if i≠w && das.D[w,i]== 3])
+           
+
+            if  (l == 3 || l == 4)  &&
+                current.need_to_know_specific_vertices && 
+                piece.need_to_know_specific_vertices &&
+                ( length(piece.degree_3) + length(current.degree_3) ≤ 2) && 
+                deg_seq_v ∈ (0,1,2,5) && old_deg_seq_u ∈ (0,1,2,5) 
+
+                new_degree_3 = current.degree_3 ∪ piece.degree_3
+                new_deg_seq_v == 3 && (new_degree_3 = new_degree_3 ∪ singleton_v)
+                new_deg_seq_u == 3 && (new_degree_3 = new_degree_3 ∪ singleton_u)
+                
+                if length(new_degree_3) > 2
+                    
+                    new_need_to_know_specific_vertices = false
+                    
+                else
+
+                    new_degree_1 = current.degree_1_vertices ∪ piece.degree_1_vertices
+                    l == 3 && old_deg_seq_u == 0 && (new_degree_1 = new_degree_1 ∪ singleton_u)
+                    l == 3 && deg_seq_v == 0 && (new_degree_1 = new_degree_1 ∪ singleton_v)
+                    old_deg_seq_u == 1 && u ∈ new_degree_1 && (new_degree_1 = new_degree_1 ∩ ~ singleton_u)
+                    deg_seq_v == 1 && v ∈ new_degree_1 && (new_degree_1 = new_degree_1 ∩ ~ singleton_v)
+
+
+                    new_degree_1_n = SBitSet{4}()
+                    for w in new_degree_1
+                        new_degree_1_n = new_degree_1_n ∪ neighbors(w)
+                    end
+                    new_degree_3_n = SBitSet{4}()
+                    for w in new_degree_3
+                        new_degree_3_n = new_degree_3_n ∪ neighbors(w)
+                    end
+
+                end 
+                
+            else
+                new_need_to_know_specific_vertices = false
+            end
+             
+            deg_seq_and_assoc = (new_gen_deg_seq,new_degree_1,new_degree_1_n,new_degree_3,new_degree_3_n)
+                 
+            
+            new_type = connected_diagram_type(new_vertices,das.D, only_sporadic=is_sporadic(piece.type) || is_sporadic(current.type), deg_seq_and_assoc=deg_seq_and_assoc)
+            new_deg_1 = new_need_to_know_specific_vertices ? new_degree_1 : SBitSet{4}()
+            new_deg_3 = new_need_to_know_specific_vertices ? new_degree_3 : SBitSet{4}()
+
+
+            if !isnothing(new_type)
+                return CISD(new_vertices,new_boundary,new_type, new_gen_deg_seq, new_need_to_know_specific_vertices, new_deg_1, new_deg_3),new_deg_seq_v
+            end
+        end
+    end
+end
+
 # compute all possible CISD extensions of `current` and put them in `new_spherical`/`new_affine`
 function _extend!__all_extensions(
     das::DiagramAndSubs,
@@ -285,12 +415,7 @@ function _extend!__all_extensions(
     if current_card > das.d
         return
     end
-    
 
-    #println("")
-    #println("Extending for vertex $v")
-    #println("currently $current")
-     
         
     if is_spherical(current.type)
         #spherical, so pushed there
@@ -302,129 +427,20 @@ function _extend!__all_extensions(
             @inbounds for card in start_card:length(das.connected_spherical)-current_card+1 # maybe can remove the +1, but it's probably needed for the affine diagrams
                 @inbounds for piece_idx in start_piece_idx:length(das.connected_spherical[card])
                     piece = das.connected_spherical[card][piece_idx]
+                   
+
+                    combined = combine(das,v,singleton_v,current,current_card,current_num_pieces,piece,card,deg_seq_v)
                     
-                    if isempty(piece.vertices∩current.vertices) &&  piece.boundary∩current.vertices == singleton_v
-                         
+                    if combined ≠ nothing
+                        (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
                         
-                        new_vertices = piece.vertices ∪ current.vertices
-                        new_boundary = ((piece.boundary ∩ ~current.vertices) ∪ (current.boundary ∩ ~piece.vertices))
-
-                        new_edges = piece.vertices ∩ current.boundary # all neighbors of v in the new piece we're considering
-                        new_edges_col = collect(new_edges)
-                        num_new_edges = length(new_edges)
-                        new_card = current_card+card
+                        new_card = current_card + card
                         new_num_pieces = current_num_pieces + 1
-                        
+                        (new_cisd,new_deg_seq_v) = combined
 
-                        if num_new_edges > 2
-                            continue
-                        elseif num_new_edges == 2 # special case: the only legal way here is if we're closing a diagram of type DT_a to one of type DT_A
-                            piece.type == DT_a || continue
-                            current_card == 1 || continue
-                            (das.D[v,new_edges_col[1]] == 3 && das.D[v,new_edges_col[2]] == 3) || continue
-                            new_edges == piece.degree_1_vertices || continue
-                            
-                            # special case, so we push and are done
-                            push!(new_affine[new_card-1],CISD(new_vertices,new_boundary,DT_A))
-                        else
-                            
-                            new_edges_col = collect(new_edges)
-
-
-                            # only one new edge.
-                            u = new_edges_col[1]
-                            singleton_u = SBitSet{4}(u)
-
-                            old_deg_seq_u = 0
-                            for w in piece.vertices
-                                if w ≠ u && das.D[u,w] ≠ 2
-                                    old_deg_seq_u = push_label(old_deg_seq_u,das.D[u,w]) 
-                                end
-                            end
-
-                            l = das.D[v,u]
-
-                            #println("only one new edge")
-                            #println("it's $u with label $l")
-                            
-                            new_deg_seq_v = push_label(deg_seq_v,l) 
-                            new_deg_seq_u = push_label(old_deg_seq_u,l)
-                            
-                            isnothing(new_deg_seq_v) && continue
-                            isnothing(new_deg_seq_u) && continue
-
-                            new_gen_deg_seq = current.degree_sequence + piece.degree_sequence
-                            update!(new_gen_deg_seq,deg_seq_v,new_deg_seq_v)
-                            update!(new_gen_deg_seq,old_deg_seq_u,new_deg_seq_u)
-                           
-                            new_degree_1 = SBitSet{4}()
-                            new_degree_3 = SBitSet{4}()
-                            new_degree_1_n = SBitSet{4}()
-                            new_degree_3_n = SBitSet{4}()
-                            new_need_to_know_specific_vertices = true
-
-                            neighbors(w) = SBitSet{4}([i for i in new_vertices if i≠w && das.D[w,i]== 3])
-                           
-
-                            if  (l == 3 || l == 4)  &&
-                                current.need_to_know_specific_vertices && 
-                                piece.need_to_know_specific_vertices &&
-                                ( length(piece.degree_3) + length(current.degree_3) ≤ 2) && 
-                                deg_seq_v ∈ (0,1,2,5) && old_deg_seq_u ∈ (0,1,2,5) 
-
-                                new_degree_3 = current.degree_3 ∪ piece.degree_3
-                                new_deg_seq_v == 3 && (new_degree_3 = new_degree_3 ∪ singleton_v)
-                                new_deg_seq_u == 3 && (new_degree_3 = new_degree_3 ∪ singleton_u)
-                                
-                                if length(new_degree_3) > 2
-                                    
-                                    new_need_to_know_specific_vertices = false
-                                    
-                                else
-
-                                    new_degree_1 = current.degree_1_vertices ∪ piece.degree_1_vertices
-                                    l == 3 && old_deg_seq_u == 0 && (new_degree_1 = new_degree_1 ∪ singleton_u)
-                                    l == 3 && deg_seq_v == 0 && (new_degree_1 = new_degree_1 ∪ singleton_v)
-                                    old_deg_seq_u == 1 && u ∈ new_degree_1 && (new_degree_1 = new_degree_1 ∩ ~ singleton_u)
-                                    deg_seq_v == 1 && v ∈ new_degree_1 && (new_degree_1 = new_degree_1 ∩ ~ singleton_v)
-
-
-                                    new_degree_1_n = SBitSet{4}()
-                                    for w in new_degree_1
-                                        new_degree_1_n = new_degree_1_n ∪ neighbors(w)
-                                    end
-                                    new_degree_3_n = SBitSet{4}()
-                                    for w in new_degree_3
-                                        new_degree_3_n = new_degree_3_n ∪ neighbors(w)
-                                    end
-
-                                end 
-                                
-                            else
-                                new_need_to_know_specific_vertices = false
-                            end
-                             
-                            deg_seq_and_assoc = (new_gen_deg_seq,new_degree_1,new_degree_1_n,new_degree_3,new_degree_3_n)
-                                 
-                            
-                            new_type = connected_diagram_type(new_vertices,das.D, only_sporadic=is_sporadic(piece.type) || is_sporadic(current.type), deg_seq_and_assoc=deg_seq_and_assoc)
-                            new_deg_1 = new_need_to_know_specific_vertices ? new_degree_1 : SBitSet{4}()
-                            new_deg_3 = new_need_to_know_specific_vertices ? new_degree_3 : SBitSet{4}()
-
-
-                            if !isnothing(new_type)
-                                new_cisd = CISD(new_vertices,new_boundary,new_type, new_gen_deg_seq, new_need_to_know_specific_vertices, new_deg_1, new_deg_3)
-                                
-                                (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
-
-                                #println("continuing with $new_cisd")
-                                _extend!__all_extensions(das,v,singleton_v,new_deg_seq_v,new_cisd,new_card,new_num_pieces,new_spherical,new_affine,start_card=new_start_card,start_piece_idx=new_start_piece_idx)
-                            end
-
-                           
-                        end
-
+                        _extend!__all_extensions(das,v,singleton_v,new_deg_seq_v,new_cisd,new_card,new_num_pieces,new_spherical,new_affine,start_card=new_start_card,start_piece_idx=new_start_piece_idx)
                     end
+
                 end
                 start_piece_idx = 1
             end               
