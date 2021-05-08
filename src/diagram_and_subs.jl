@@ -249,8 +249,8 @@ function extend!(das::DiagramAndSubs, v::Array{Int,1})
     new_vertex = n+1
     singleton_v = SBitSet{4}(new_vertex)
     boundary_v = SBitSet{4}([i for i in 1:n if das.D[i,new_vertex]≠2])
-    new_spherical = [Vector{CISD}() for i in 1:das.d]
-    new_affine    = [Vector{CISD}() for i in 1:das.d]
+    new_spherical = Vector{CISD}[Vector{CISD}() for i in 1:das.d]
+    new_affine    = Vector{CISD}[Vector{CISD}() for i in 1:das.d]
     
     # Add v to the neighbors of preceding connected graphs
     for cisd in Iterators.flatten((Iterators.flatten(das.connected_spherical),Iterators.flatten(das.connected_affine)))
@@ -258,8 +258,53 @@ function extend!(das::DiagramAndSubs, v::Array{Int,1})
             cisd.boundary = cisd.boundary ∪ singleton_v
         end
     end
+   
+    cisd_v = CISD(singleton_v,boundary_v,DT_a,GenDegSeq([empty_deg]),true,SBitSet{4}(),SBitSet{4}())
+    push!(new_spherical[1],cisd_v)
     
-    _extend!__all_extensions(das,new_vertex,singleton_v,empty_deg,CISD(singleton_v,boundary_v,DT_a,GenDegSeq([empty_deg]),true,SBitSet{4}(),SBitSet{4}()),1,0,new_spherical,new_affine)
+    #stack = Stack{Tuple{CISD,Int,Int,GenDeg,Int,Int},4}((cisd_v,1,0,empty_deg,1,1))
+    stack = Tuple{CISD,Int,Int,GenDeg,Int,Int}[(cisd_v,1,0,empty_deg,1,1)]
+    @label helloworld 
+    while !isempty(stack)
+
+        (current,current_card,current_num_pieces,deg_seq_v,start_card,start_piece_idx) = pop!(stack)
+
+        @inbounds for card in start_card:length(das.connected_spherical)-current_card+1 # maybe can remove the +1, but it's probably needed for the affine diagrams
+            @inbounds for piece_idx in start_piece_idx:length(das.connected_spherical[card])
+                piece = das.connected_spherical[card][piece_idx]
+               
+
+                combined = combine(das,new_vertex,singleton_v,current,current_card,current_num_pieces,piece,card,deg_seq_v)
+                
+                if combined ≠ nothing
+                    (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
+                    
+                    new_card = current_card + card
+                    new_num_pieces = current_num_pieces + 1
+                    (new_cisd,new_deg_seq_v) = combined
+
+                    if is_spherical(new_cisd.type) && new_card ≤ das.d
+                        push!(new_spherical[new_card], new_cisd)
+                        if new_num_pieces ≤ 2 # still possible to extend
+                            push!(stack,(current,current_card,current_num_pieces,deg_seq_v,new_start_card,new_start_piece_idx))
+                            push!(stack,(new_cisd,new_card,new_num_pieces,new_deg_seq_v,new_start_card,new_start_piece_idx))
+                            @goto helloworld
+                        end
+
+                    elseif is_affine(new_cisd.type) && new_card ≤ das.d # is affine
+                        push!(new_affine[new_card-1], new_cisd)
+                    else
+                        #hello
+                    end
+
+                end
+
+            end
+            start_piece_idx = 1
+        end               
+
+    end
+
    
     for i in 1:das.d
         append!(das.connected_spherical[i],new_spherical[i])
@@ -270,16 +315,16 @@ end
 
 
 function combine(
-    das,
+    das::DiagramAndSubs,
     v::Int,
-    singleton_v,
+    singleton_v::SBitSet{4},
     current::CISD,
     current_card::Int,
     current_num_pieces::Int,
     piece::CISD,
     card::Int,
-    deg_seq_v,
-)
+    deg_seq_v::GenDeg,
+)::Union{Nothing,Tuple{CISD,GenDeg}}
     
     if isempty(piece.vertices∩current.vertices) &&  piece.boundary∩current.vertices == singleton_v
          
@@ -396,68 +441,6 @@ function combine(
         end
     end
 end
-
-# compute all possible CISD extensions of `current` and put them in `new_spherical`/`new_affine`
-function _extend!__all_extensions(
-    das::DiagramAndSubs,
-    v::Int,
-    singleton_v,
-    deg_seq_v::GenDeg,
-    current::CISD,
-    current_card::Int,
-    current_num_pieces::Int,
-    new_spherical,
-    new_affine;
-    start_card=1,
-    start_piece_idx=1
-)
-    
-    if current_card > das.d
-        return
-    end
-
-        
-    if is_spherical(current.type)
-        #spherical, so pushed there
-        #@assert current_cisd ∉ new_spherical[current_card]
-        push!(new_spherical[current_card],current)
-        
-        if current_num_pieces < 3
-            #since spherical, can (probably) be extended:
-            @inbounds for card in start_card:length(das.connected_spherical)-current_card+1 # maybe can remove the +1, but it's probably needed for the affine diagrams
-                @inbounds for piece_idx in start_piece_idx:length(das.connected_spherical[card])
-                    piece = das.connected_spherical[card][piece_idx]
-                   
-
-                    combined = combine(das,v,singleton_v,current,current_card,current_num_pieces,piece,card,deg_seq_v)
-                    
-                    if combined ≠ nothing
-                        (new_start_card,new_start_piece_idx) = piece_idx == length(das.connected_spherical[card]) ? (card+1,1) : (card,piece_idx+1)
-                        
-                        new_card = current_card + card
-                        new_num_pieces = current_num_pieces + 1
-                        (new_cisd,new_deg_seq_v) = combined
-
-                        _extend!__all_extensions(das,v,singleton_v,new_deg_seq_v,new_cisd,new_card,new_num_pieces,new_spherical,new_affine,start_card=new_start_card,start_piece_idx=new_start_piece_idx)
-                    end
-
-                end
-                start_piece_idx = 1
-            end               
-        end
-
-    elseif is_affine(current.type)
-        #affine, so pushed there
-        #@assert current_cisd ∉ new_affine[current_card-1]
-        push!(new_affine[current_card-1],current)
-    else
-        @assert false "Diagram either affine or spherical"
-    end
-        # `current` is invalid (thus cannot be extended to something valid, bye)
-
-    
-end
-
 
 
 
