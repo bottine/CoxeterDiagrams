@@ -79,7 +79,7 @@ all_affine_of_rank(das::DiagramAndSubs,min::Int,max::Int) = AllAffineOfRank(das,
 
 
 
-function all_affine_extend_well(das)
+function all_affine_extend_well_safe(das)
     affine = SBitSet{4}[]
     affine_rank_dm = SBitSet{4}[]
 
@@ -99,72 +99,38 @@ function all_affine_extend_well(das)
 end
 
 
-function all_affine_extend_well_bad(das)
-   
-    stack = Stack{Tuple{SBitSet{4},SBitSet{4},Int,Int,Int,Bool},20}((SBitSet{4}(),SBitSet{4}(),0,1,1,false)) # Because we assume das.d ≤ 20 always!
-    
-    @label killbillvol2
-    while !isempty(stack)
-        
-        println("-------------------------------------")
-        println("stack is:")
-        for s in stack.stack[1:stack.idx]
-            println("$(s[1]) $(s[6])")
-        end
-        println("-------------------------------------")
-        println("looking at")
+function all_affine_extend_well(das)
 
-        (current_vertices,current_boundary,current_rank,start_rank,start_idx,needs_extension_yet) = pop!(stack)
-        println("$current_vertices $needs_extension_yet ($start_rank, $start_idx)")
-        println("------------------------------------")
-        extends = !needs_extension_yet 
+    affine_rank_dm = SBitSet{4}[]
+    last_diag = nothing
+    last_rank = nothing
+    for (diag,rank) in AllAffineOfRank(das,1,das.d-1)
 
-        @inbounds for piece_rank in start_rank:das.d-1-current_rank
-            @inbounds for piece_idx in start_idx:length(das.connected_affine[piece_rank])
-                piece = das.connected_affine[piece_rank][piece_idx]
-                
-                println("can the following extend?")
-                println(piece.vertices)
-
-                @tassert piece_rank == length(piece.vertices) - 1
-                
-                if  isempty(piece.vertices ∩ current_vertices) && 
-                    isempty(piece.boundary ∩ current_vertices) 
-                   
-                    println("extendedable with:")
-                    println("$(piece.vertices)")
-                    extends = true
-
-                    new_vertices = piece.vertices ∪ current_vertices
-                    new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
-                    new_rank = current_rank + piece_rank
-
-                    (new_start_rank,new_start_idx) = piece_idx == length(das.connected_affine[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
-
-                    if new_rank == das.d-1
-
-                        push!(stack, (current_vertices,current_boundary,current_rank,new_start_rank,new_start_idx,false))
-                    else
-                        push!(stack, (current_vertices,current_boundary,current_rank,new_start_rank,new_start_idx,needs_extension_yet))
-                        push!(stack, (new_vertices,new_boundary,new_rank,1,1,true))
-                    end
-                    @goto killbillvol2
-                end
-            end
-            start_idx=1
+        if last_rank ≠ nothing && last_rank ≠ das.d-1 && !(last_diag ⊆ diag)
+            if !any(last_diag ⊆ diag_dm for diag_dm in affine_rank_dm)
+                return false
+            end           
         end
         
-        !extends && return false
-
+        if rank == das.d-1
+            push!(affine_rank_dm, diag)
+            last_diag,last_rank = nothing,nothing
+        else
+            last_diag,last_rank = diag,rank
+        end
+        
+    end
+    if last_rank ≠ nothing && last_rank ≠ das.d-1
+        if !any(last_diag ⊆ diag_dm for diag_dm in affine_rank_dm)
+            return false
+        end               
     end
     
+
+
     return true
 
 end
-
-
-
-
 
 struct AllAffineDirectExtensions
     das::DiagramAndSubs

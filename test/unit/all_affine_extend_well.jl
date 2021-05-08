@@ -1,6 +1,19 @@
 
 
-@testset "Finite volume precheck negative implies not finite volume, and not finite volume implies not compact." begin
+@testset "all_affine_extend_well on random matrices" begin
+    for rank in 2:13, size in rank+1:20, round in 1:10
+        M = rand([0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,3,3,4,5,6,7,8],size,size); M = tril(M); M = M + M'
+        das = DiagramAndSubs(M,rank)
+
+        @test CoxeterDiagrams.all_affine_extend_well_safe(das) == CoxeterDiagrams.all_affine_extend_well(das)
+
+    end
+end
+
+
+
+
+@testset "all_affine_extend_well on known examples" begin
     @testset "Known diagrams" for row in CSV.Rows("../graphs/known_values.csv";
                                                                           comment="#",
                                                                           delim=";",
@@ -25,17 +38,8 @@
                     das = DiagramAndSubs(rank)
                     for i in 1:size(D)[1]
                         extend!(das,D[i,1:i-1])
-                        println("$i")
-                        precheck = CoxeterDiagrams.all_affine_extend_well(das)
-                        finvol = is_finite_volume(das,precheck=false)
-                        compact = is_compact(das)
-
-                        #@test precheck3 == precheck2 
-                        @test precheck ≥ finvol
-                        @test finvol ≥ compact 
+                        @test CoxeterDiagrams.all_affine_extend_well_safe(das) == CoxeterDiagrams.all_affine_extend_well(das)
                     end
-
-                    println()
 
                 end
             end
