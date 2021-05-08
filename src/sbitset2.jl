@@ -111,3 +111,11 @@ end
 
 
 Base.eltype(::Type{SBitSet}) = UInt64
+
+function Base.show(io::IO, s::SBitSet{N}) where N
+    print(io,"{")
+    for n in s
+        print(io,n,",")
+    end
+    print(io,"}")
+end
