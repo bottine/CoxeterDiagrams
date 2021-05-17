@@ -1,5 +1,5 @@
 
-mutable struct ConnectedInducedSubDiagram
+struct ConnectedInducedSubDiagram
     vertices::SBitSet{4}
     boundary::SBitSet{4}
     type::DiagramType
@@ -57,17 +57,17 @@ function connected_diagram_type(VS::SBitSet{4},D::Array{Int,2}; only_sporadic::B
     end
     
 
-    joined = nothing
+    type = nothing::Union{Nothing,DiagramType}
     if  length(VS) ≤ 9
-        joined = connected_sporadic_diagram_type(VS,D,deg_seq_and_assoc) 
+        type = connected_sporadic_diagram_type(VS,D,deg_seq_and_assoc) 
     end
-    if joined === nothing && !only_sporadic
-        joined = connected_non_sporadic_diagram_type(VS,D,deg_seq_and_assoc)
+    if type === nothing && !only_sporadic
+        type = connected_non_sporadic_diagram_type(VS,D,deg_seq_and_assoc)
     end
  
 
 
-    return joined
+    return type
 end
 
 function build_deg_seq_and_associated_data(VS::SBitSet{4},D::Array{Int,2})
@@ -253,9 +253,16 @@ function extend!(das::DiagramAndSubs, v::Array{Int,1})
     new_affine    = Vector{CISD}[Vector{CISD}() for i in 1:das.d]
     
     # Add v to the neighbors of preceding connected graphs
-    for cisd in Iterators.flatten((Iterators.flatten(das.connected_spherical),Iterators.flatten(das.connected_affine)))
+    for i in 1:length(das.connected_spherical), j in 1:length(das.connected_spherical[i])
+        cisd = das.connected_spherical[i][j]
         if !isempty(boundary_v ∩ cisd.vertices)
-            cisd.boundary = cisd.boundary ∪ singleton_v
+            das.connected_spherical[i][j] = CISD(cisd.vertices,cisd.boundary ∪ singleton_v,cisd.type,cisd.degree_sequence,cisd.need_to_know_specific_vertices,cisd.degree_1_vertices,cisd.degree_3)
+        end
+    end
+    for i in 1:length(das.connected_affine), j in 1:length(das.connected_affine[i])
+        cisd = das.connected_affine[i][j]
+        if !isempty(boundary_v ∩ cisd.vertices)
+            das.connected_affine[i][j] = CISD(cisd.vertices,cisd.boundary ∪ singleton_v,cisd.type,cisd.degree_sequence,cisd.need_to_know_specific_vertices,cisd.degree_1_vertices,cisd.degree_3)
         end
     end
    
