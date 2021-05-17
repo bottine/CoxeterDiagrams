@@ -1,13 +1,10 @@
 
 # TODO
 #
-# * memoize connected_diagram_type by hand
 # * make computation of build_deg_seq_and_associated_data more efficient by using previously constructed deg_seqs of the previous components?
 # * clean up structure
 # * back from bitsets to lists?
 #
-#
-# * be efficient enough to run on the ./graphs/18-vinbxx examples
 
 module CoxeterDiagrams
 

@@ -223,9 +223,9 @@ function connected_sporadic_diagram_type(VS::SBitSet{4},D::Array{Int,2},deg_seq_
         return DT_e7
     elseif ds == deg_seq_e8 && length(center_neighbors∩extremities) == 1 && length(extremities_neighbors ∩ center_neighbors) == 1 
         return DT_e8
-    elseif ds == deg_seq_E6 && isempty(center_neighbors∩extremities)    
+    elseif ds == deg_seq_E6 && center_neighbors ⟂ extremities    
         return DT_E6
-    elseif ds == deg_seq_E7 && length(center_neighbors∩extremities) == 1 && isempty(extremities_neighbors ∩ center_neighbors) 
+    elseif ds == deg_seq_E7 && length(center_neighbors∩extremities) == 1 && extremities_neighbors ⟂ center_neighbors 
         return DT_E7
     elseif ds == deg_seq_E8 && length(center_neighbors∩extremities) == 1 && length(extremities_neighbors ∩ center_neighbors) == 1 
         return DT_E8
@@ -255,13 +255,13 @@ function extend!(das::DiagramAndSubs, v::Array{Int,1})
     # Add v to the neighbors of preceding connected graphs
     for i in 1:length(das.connected_spherical), j in 1:length(das.connected_spherical[i])
         cisd = das.connected_spherical[i][j]
-        if !isempty(boundary_v ∩ cisd.vertices)
+        if !(boundary_v ⟂ cisd.vertices)
             das.connected_spherical[i][j] = CISD(cisd.vertices,cisd.boundary ∪ singleton_v,cisd.type,cisd.degree_sequence,cisd.need_to_know_specific_vertices,cisd.degree_1_vertices,cisd.degree_3)
         end
     end
     for i in 1:length(das.connected_affine), j in 1:length(das.connected_affine[i])
         cisd = das.connected_affine[i][j]
-        if !isempty(boundary_v ∩ cisd.vertices)
+        if !(boundary_v ⟂ cisd.vertices)
             das.connected_affine[i][j] = CISD(cisd.vertices,cisd.boundary ∪ singleton_v,cisd.type,cisd.degree_sequence,cisd.need_to_know_specific_vertices,cisd.degree_1_vertices,cisd.degree_3)
         end
     end
@@ -333,7 +333,7 @@ function combine(
     deg_seq_v::GenDeg,
 )::Union{Nothing,Tuple{CISD,GenDeg}}
     
-    if isempty(piece.vertices∩current.vertices) &&  piece.boundary∩current.vertices == singleton_v
+    if piece.vertices⟂current.vertices &&  piece.boundary∩current.vertices == singleton_v
          
         
         new_vertices = piece.vertices ∪ current.vertices

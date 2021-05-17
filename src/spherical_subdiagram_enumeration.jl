@@ -46,8 +46,8 @@ function Base.iterate(a::AllSphericalOfRank,state)
                 @tassert piece_rank == length(piece.vertices)
                 @tassert current_rank + piece_rank ≤ max
                 
-                if  isempty(piece.vertices ∩ current_vertices) && 
-                    isempty(piece.boundary ∩ current_vertices) 
+                if  piece.vertices ⟂ current_vertices && 
+                    piece.boundary ⟂ current_vertices 
                     
                     new_vertices = piece.vertices ∪ current_vertices
                     new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
@@ -94,7 +94,7 @@ function Base.iterate(a::AllSphericalDirectExtensions,state=(1,1))
     @inbounds for piece_rank in start_rank:das.d
         @inbounds for piece_idx in start_idx:length(das.connected_spherical[piece_rank])
             piece = das.connected_spherical[piece_rank][piece_idx]
-            if length(piece.vertices ∩ ~vertices) == 1 && isempty(piece.boundary ∩ vertices)
+            if length(piece.vertices ∩ ~vertices) == 1 && piece.boundary ⟂ vertices
                 (new_start_rank,new_start_idx) = piece_idx == length(das.connected_spherical[piece_rank]) ? (piece_rank+1,1) : (piece_rank,piece_idx+1)
                 return (piece.vertices ∪ vertices,(new_start_rank,new_start_idx)) 
             end

@@ -45,6 +45,27 @@ Base.:(~)(s1::SBitSet{N},s2::SBitSet{N}) where N = s1 ∩ ~s2
    s1 ∩ s2 == s1 
 end
 
+#@inline function ⟂(s1::SBitSet{N},s2::SBitSet{N}) where N
+#    all(==(0),(&).(s1.pieces,s2.pieces))
+#end
+
+@inline function isdisjoint(s1::SBitSet{N},s2::SBitSet{N}) where N
+    @inbounds for i in 1:N
+        (s1.pieces[i]&s2.pieces[i]) ≠ 0 && return false
+    end
+    return true
+end
+
+@inline function isdisjoint2(s1::SBitSet{N},s2::SBitSet{N}) where N
+    @inbounds @simd for i in 1:N
+        (s1.pieces[i]&s2.pieces[i]) ≠ 0 && return false
+    end
+    return true
+end
+
+⟂(s1::SBitSet{N},s2::SBitSet{N}) where N = isdisjoint2(s1,s2)
+
+
 @inline function SBitSet{N}() where N
     SBitSet{N}(ntuple(x->UInt64(0),N))
 end

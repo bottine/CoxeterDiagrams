@@ -44,8 +44,8 @@ function Base.iterate(a::AllAffineOfRank,state)
                 @tassert piece_rank == length(piece.vertices) - 1
                 @tassert current_rank + piece_rank ≤ max
                 
-                if  isempty(piece.vertices ∩ current_vertices) && 
-                    isempty(piece.boundary ∩ current_vertices) 
+                if  piece.vertices ⟂ current_vertices && 
+                    piece.boundary ⟂ current_vertices 
                     
                     new_vertices = piece.vertices ∪ current_vertices
                     new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
@@ -159,10 +159,10 @@ function Base.iterate(a::AllAffineDirectExtensions,state)
         @inbounds for piece_rank in start_rank:length(das.connected_affine)
             @inbounds for piece_idx in start_idx:length(das.connected_affine[piece_rank])
                 piece = das.connected_affine[piece_rank][piece_idx]
-                if  isempty(piece.vertices∩current_vertices) && 
-                    isempty(piece.boundary∩current_vertices) &&
+                if  piece.vertices ⟂ current_vertices && 
+                    piece.boundary ⟂ current_vertices &&
                     length(piece.vertices ∩ ~remaining_vertices) == 1 &&
-                    isempty(piece.boundary ∩ remaining_vertices)
+                    piece.boundary ⟂ remaining_vertices
                     
                     new_vertices = piece.vertices ∪ current_vertices
                     new_boundary = ((piece.boundary ∩ ~current_vertices) ∪ (current_boundary ∩ ~piece.vertices))
