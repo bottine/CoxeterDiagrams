@@ -28,7 +28,7 @@ end
             ret = CoxeterDiagrams.gug_coxiter_to_matrix(s)
             if ret === nothing
                 println("Failed reading $path")
-            else
+            elseif !contains(path,"drop") 
                 (D, rank) = ret
                 if D === nothing || rank === nothing
                     println("Error reading file probably")

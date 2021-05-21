@@ -65,6 +65,15 @@ end
 
 ⟂(s1::SBitSet{N},s2::SBitSet{N}) where N = isdisjoint2(s1,s2)
 
+@inline function singleton_intersection(s1::SBitSet{N},s2::SBitSet{N}) where N
+    ones_tot = 0
+    @inbounds for i in 1:N
+        ones_tot += count_ones(s1.pieces[i]&s2.pieces[i])
+        ones_tot > 1 && return false
+    end
+    return Bool(ones_tot)
+end
+
 
 @inline function SBitSet{N}() where N
     SBitSet{N}(ntuple(x->UInt64(0),N))

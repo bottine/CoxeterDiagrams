@@ -77,14 +77,18 @@ Base.IteratorSize(::Type{AllAffineOfRank}) = Base.SizeUnknown()
 all_affine_of_rank(das::DiagramAndSubs,n::Int) = AllAffineOfRank(das,n) 
 all_affine_of_rank(das::DiagramAndSubs,min::Int,max::Int) = AllAffineOfRank(das,min,max,SBitSet{4}())
 
+"""
+    all_affine_extend_well_safe(das)
 
-
+Check that all affine diagram **of rank at least `2`** are contained in some affine diagram of rank `das.d-1`.
+This is the “safe” version, in that the verification is done by first collecting all diagrams of  rank at least `2`, and storing the ones of rank `das.d-1`, and then checking containment for each.
+"""
 function all_affine_extend_well_safe(das)
     affine = SBitSet{4}[]
     affine_rank_dm = SBitSet{4}[]
 
     for (diag,rank) in AllAffineOfRank(das,1,das.d-1)
-        push!(affine,diag)
+        rank ≥ 2 && push!(affine,diag)
         rank == das.d-1 && push!(affine_rank_dm, diag) 
     end
     
@@ -98,7 +102,16 @@ function all_affine_extend_well_safe(das)
     
 end
 
+"""
+    all_affine_extend_well(das)
 
+Check that all affine diagram **of rank at least `2`** are contained in some affine diagram of rank `das.d-1`.
+This is the “unsafe” version: it uses the iterator `AllAffineOfRank` and the fact that the iteration follows a kind of sawtooth pattern: 
+
+    If the iterator yields `diagram[i]` and then `diagram[i+1]` (array notation used for convenience, both are bitsets representing the diagrams) and `diagram[i] ⊈ diagram[i+1]`, then any extension of `diagram[i]` must appear before step `i`, i.e. as some `diagram[j]` with `j<i`.  
+
+Therefore, to check that all diagrams of rank at least `2` extend to one of rank `das.d-1`, we follow the iterator, store all diagrams of rank `das.d-1` we get, and everytime we have `diagram[i] ⊈ diagram[i+1]` and `2 ≤ rank(diagram[i]) ≠ das.d-1`, check that `diagram[i]` can be extended by one of the previously found diagrams of rank `das.d-1`: if not, this means we have found a non-extendable diagram; otherwise we continue.
+"""
 function all_affine_extend_well(das)
 
     affine_rank_dm = SBitSet{4}[]
@@ -106,7 +119,7 @@ function all_affine_extend_well(das)
     last_rank = nothing
     for (diag,rank) in AllAffineOfRank(das,1,das.d-1)
 
-        if last_rank ≠ nothing && last_rank ≠ das.d-1 && !(last_diag ⊆ diag)
+        if last_rank ≠ nothing && last_rank ≥ 2 && last_rank ≠ das.d-1 && !(last_diag ⊆ diag)
             if !any(last_diag ⊆ diag_dm for diag_dm in affine_rank_dm)
                 return false
             end           
@@ -120,7 +133,7 @@ function all_affine_extend_well(das)
         end
         
     end
-    if last_rank ≠ nothing && last_rank ≠ das.d-1
+    if last_rank ≠ nothing && last_rank ≥ 2 && last_rank ≠ das.d-1
         if !any(last_diag ⊆ diag_dm for diag_dm in affine_rank_dm)
             return false
         end               

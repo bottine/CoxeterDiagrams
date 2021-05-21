@@ -33,6 +33,7 @@ end
 function is_finite_volume(das::DiagramAndSubs; precheck=true)
 
     # As in Guglielmetti Prop 6.3.1 p. 118 (PhD thesis)
+    # BEWARE: there is (probably) a typo in the statement: we only check that all affine diagrams of rank ≥ 2 extend to affine diagrams of rank = das.d-1. 
     if precheck && !all_affine_extend_well(das)
         return false
     end
