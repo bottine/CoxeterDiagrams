@@ -95,3 +95,14 @@ function gug_coxiter_to_matrix(descr)
     return D, rank
 
 end
+
+function dot_coxiter(das)
+   s = ""
+   s *= "$(das.d) $(size(das.D)[1])\n"
+   for i in 1:size(das.D)[1], j in (i+1):size(das.D)[1]
+       das.D[i,j] ≠ 2 && (s *= "$i $j $(das.D[i,j])\n")
+   end
+   return s
+end
+
+
